@@ -1,0 +1,9 @@
+# Go build output
+send-email
+send-email-linux-amd64
+
+# Test cache
+/tmp/
+
+# Editor artifacts
+.DS_Store
