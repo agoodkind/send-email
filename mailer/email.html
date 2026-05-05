@@ -11,9 +11,10 @@ body { font: 14px -apple-system, BlinkMacSystemFont, Arial, sans-serif; margin: 
 </head>
 <body>
 <div style="display:none;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;font-family:sans-serif;">
-{{.Preheader}}{{.PreheaderPad}}
+{{.Preheader}}<span aria-hidden="true">&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</span>
 </div>
-<div>{{.BodyHTML}}</div>
+<div>{{range $i, $line := .BodyLines}}{{if $i}}<br>
+{{end}}{{$line}}{{end}}</div>
 <div class="meta">
 <table>
   <tr><td class="k">Caller</td><td>{{.Caller}}</td></tr>

@@ -1,7 +1,9 @@
 package mailer
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -155,7 +157,7 @@ func ParseMsmtprc(data []byte) (Account, error) {
 	}
 
 	if defaultAlias == "" {
-		return Account{}, fmt.Errorf("msmtprc: missing 'account default : NAME'")
+		return Account{}, errors.New("msmtprc: missing 'account default : NAME'")
 	}
 	named, ok := accounts[defaultAlias]
 	if !ok {
@@ -163,13 +165,13 @@ func ParseMsmtprc(data []byte) (Account, error) {
 	}
 	acc := mergeMsmtp(defaults, named)
 	if acc.Host == "" {
-		return Account{}, fmt.Errorf("msmtprc: missing host")
+		return Account{}, errors.New("msmtprc: missing host")
 	}
 	if acc.From == "" {
-		return Account{}, fmt.Errorf("msmtprc: missing from")
+		return Account{}, errors.New("msmtprc: missing from")
 	}
 	if acc.User == "" || acc.Password == "" {
-		return Account{}, fmt.Errorf("msmtprc: missing user or password")
+		return Account{}, errors.New("msmtprc: missing user or password")
 	}
 	return acc, nil
 }
@@ -181,7 +183,9 @@ func LoadMsmtprc(path string) (Account, error) {
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return Account{}, err
+		wrapped := fmt.Errorf("read msmtprc %q: %w", path, err)
+		slog.Error("msmtprc read failed", "err", wrapped, "path", path)
+		return Account{}, wrapped
 	}
 	return ParseMsmtprc(data)
 }

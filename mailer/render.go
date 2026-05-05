@@ -5,14 +5,15 @@ import (
 	_ "embed"
 	"fmt"
 	"html/template"
+	"log/slog"
 	"strings"
-	"time"
 )
 
 //go:embed email.html
 var emailHTMLTmpl string
 
-// RenderPlain expands escape sequences in msg the same way echo -e would for simple \n.
+// RenderPlain expands escape sequences in msg the same way echo -e would
+// for simple "\n" pairs.
 func RenderPlain(msg string) string {
 	return strings.ReplaceAll(msg, `\n`, "\n")
 }
@@ -23,80 +24,92 @@ type ipRow struct {
 }
 
 type htmlEmailData struct {
-	Preheader    template.HTML
-	PreheaderPad template.HTML
-	BodyHTML     template.HTML
-	Caller       string
-	TimeStr      string
-	Hostname     string
-	Uptime       string
-	Load         string
-	Memory       string
-	Disk         string
-	Pub4         string
-	Pub6         string
-	ISP          string
-	Local4       []ipRow
-	Local6       []ipRow
+	Preheader string
+	BodyLines []string
+	Caller    string
+	TimeStr   string
+	Hostname  string
+	Uptime    string
+	Load      string
+	Memory    string
+	Disk      string
+	Pub4      string
+	Pub6      string
+	ISP       string
+	Local4    []ipRow
+	Local6    []ipRow
 }
 
-// RenderHTML builds the multipart HTML body with metadata footer.
-func RenderHTML(msg, caller, hostname string, si SysInfo) (string, error) {
+// RenderHTML builds the multipart HTML body with a metadata footer.
+//
+// now defaults to [SystemClock] when nil; callers may inject a clock for
+// deterministic tests.
+func RenderHTML(msg, caller, hostname string, si SysInfo, now Clock) (string, error) {
+	if now == nil {
+		now = SystemClock
+	}
 	plainBody := RenderPlain(msg)
 	oneLine := strings.ReplaceAll(strings.TrimSpace(plainBody), "\n", " ")
-	pad := strings.Repeat("&nbsp;&zwnj;", 100)
-	var local4 []ipRow
-	for _, line := range si.LocalIPv4Lines {
-		parts := strings.Fields(line)
-		if len(parts) >= 2 {
-			local4 = append(local4, ipRow{Iface: parts[0], IP: strings.Join(parts[1:], " ")})
-		}
-	}
-	var local6 []ipRow
-	for _, line := range si.LocalIPv6Lines {
-		parts := strings.Fields(line)
-		if len(parts) >= 2 {
-			local6 = append(local6, ipRow{Iface: parts[0], IP: strings.Join(parts[1:], " ")})
-		}
-	}
-	bodyHTML := template.HTML(strings.ReplaceAll(
-		template.HTMLEscapeString(plainBody), "\n", "<br>\n"))
+	bodyLines := strings.Split(plainBody, "\n")
 	data := htmlEmailData{
-		Preheader:    template.HTML(template.HTMLEscapeString(oneLine)),
-		PreheaderPad: template.HTML(pad),
-		BodyHTML:     bodyHTML,
-		Caller:       caller,
-		TimeStr:      time.Now().Format("2006-01-02 15:04:05 MST"),
-		Hostname:     hostname,
-		Uptime:       si.UptimeHuman,
-		Load:         si.LoadAverage,
-		Memory:       si.MemoryHuman,
-		Disk:         si.DiskRootHuman,
-		Pub4:         si.PublicIPv4,
-		Pub6:         si.PublicIPv6,
-		ISP:          si.ISP,
-		Local4:       local4,
-		Local6:       local6,
+		Preheader: oneLine,
+		BodyLines: bodyLines,
+		Caller:    caller,
+		TimeStr:   now().Format("2006-01-02 15:04:05 MST"),
+		Hostname:  hostname,
+		Uptime:    si.UptimeHuman,
+		Load:      si.LoadAverage,
+		Memory:    si.MemoryHuman,
+		Disk:      si.DiskRootHuman,
+		Pub4:      si.PublicIPv4,
+		Pub6:      si.PublicIPv6,
+		ISP:       si.ISP,
+		Local4:    parseIPRows(si.LocalIPv4Lines),
+		Local6:    parseIPRows(si.LocalIPv6Lines),
 	}
 	tmpl, err := template.New("email").Parse(emailHTMLTmpl)
 	if err != nil {
-		return "", err
+		wrapped := fmt.Errorf("parse email template: %w", err)
+		slog.Error("email template parse failed", "err", wrapped)
+		return "", wrapped
 	}
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {
-		return "", err
+		wrapped := fmt.Errorf("execute email template: %w", err)
+		slog.Error("email template execute failed", "err", wrapped)
+		return "", wrapped
 	}
 	return buf.String(), nil
 }
 
-// FormatTextBody appends caller/host/time footer to plain text (bash send-email behavior).
-func FormatTextBody(msg, caller, hostname string) string {
+func parseIPRows(lines []string) []ipRow {
+	var rows []ipRow
+	for _, line := range lines {
+		parts := strings.Fields(line)
+		if len(parts) >= 2 {
+			rows = append(rows, ipRow{
+				Iface: parts[0],
+				IP:    strings.Join(parts[1:], " "),
+			})
+		}
+	}
+	return rows
+}
+
+// FormatTextBody appends a caller/host/time footer to the plain text body
+// (matches the legacy bash send-email behavior).
+//
+// now defaults to [SystemClock] when nil.
+func FormatTextBody(msg, caller, hostname string, now Clock) string {
+	if now == nil {
+		now = SystemClock
+	}
 	plain := RenderPlain(msg)
 	return fmt.Sprintf(
 		"%s\n\nCaller: %s\nHost: %s\nTime: %s",
 		plain,
 		caller,
 		hostname,
-		time.Now().Format("2006-01-02 15:04:05 MST"),
+		now().Format("2006-01-02 15:04:05 MST"),
 	)
 }

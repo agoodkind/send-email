@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -29,7 +30,8 @@ type SysInfo struct {
 	LocalIPv6Lines []string
 }
 
-// CollectSysInfo gathers system information. On non-Linux, some fields read as N/A.
+// CollectSysInfo gathers system information.
+// On non-Linux platforms, some fields read as "N/A".
 func CollectSysInfo(ctx context.Context) SysInfo {
 	h, _ := os.Hostname()
 	si := SysInfo{Hostname: h}
@@ -116,10 +118,7 @@ func linuxMemHuman() string {
 	if totalKB == 0 {
 		return "N/A"
 	}
-	usedKB := totalKB - availKB
-	if usedKB < 0 {
-		usedKB = 0
-	}
+	usedKB := max(totalKB-availKB, 0)
 	return fmt.Sprintf("%.1fG/%.1fG",
 		float64(usedKB)/1024/1024,
 		float64(totalKB)/1024/1024)
@@ -170,51 +169,31 @@ func firstHTTPBody(ctx context.Context, network string, urls []string, timeout t
 	client := &http.Client{Timeout: timeout}
 	dialer := &net.Dialer{Timeout: 3 * time.Second}
 	tr := &http.Transport{
-		DialContext: func(ctx context.Context, n, addr string) (net.Conn, error) {
-			if network == "tcp4" {
+		DialContext: func(ctx context.Context, _, addr string) (net.Conn, error) {
+			switch network {
+			case "tcp4":
 				return dialer.DialContext(ctx, "tcp4", addr)
-			}
-			if network == "tcp6" {
+			case "tcp6":
 				return dialer.DialContext(ctx, "tcp6", addr)
+			default:
+				return dialer.DialContext(ctx, "tcp", addr)
 			}
-			return dialer.DialContext(ctx, "tcp", addr)
 		},
 	}
 	client.Transport = tr
 
 	for _, u := range urls {
-		u := u
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if winner != "" {
-				return
-			}
-			req, err := http.NewRequestWithContext(parent, http.MethodGet, u, nil)
-			if err != nil {
-				return
-			}
-			resp, err := client.Do(req)
-			if err != nil {
-				return
-			}
-			defer func() { _ = resp.Body.Close() }()
-			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-				return
-			}
-			b, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
-			if err != nil || len(b) == 0 {
-				return
-			}
-			s := strings.TrimSpace(string(b))
-			if s == "" {
-				return
-			}
-			mu.Lock()
-			if winner == "" {
-				winner = s
-			}
-			mu.Unlock()
+			defer func() {
+				if r := recover(); r != nil {
+					slog.ErrorContext(parent, "firstHTTPBody panic",
+						"err", fmt.Errorf("panic: %v", r),
+						"url", u)
+				}
+			}()
+			fetchInto(parent, client, u, &mu, &winner)
 		}()
 	}
 	wg.Wait()
@@ -222,6 +201,40 @@ func firstHTTPBody(ctx context.Context, network string, urls []string, timeout t
 		return winner
 	}
 	return "N/A"
+}
+
+func fetchInto(ctx context.Context, client *http.Client, url string, mu *sync.Mutex, winner *string) {
+	mu.Lock()
+	if *winner != "" {
+		mu.Unlock()
+		return
+	}
+	mu.Unlock()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return
+	}
+	b, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if err != nil || len(b) == 0 {
+		return
+	}
+	s := strings.TrimSpace(string(b))
+	if s == "" {
+		return
+	}
+	mu.Lock()
+	if *winner == "" {
+		*winner = s
+	}
+	mu.Unlock()
 }
 
 func localAddrs() (v4lines, v6lines []string) {

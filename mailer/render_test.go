@@ -16,7 +16,7 @@ func TestRenderPlain(t *testing.T) {
 
 func TestFormatTextBody(t *testing.T) {
 	t.Parallel()
-	out := FormatTextBody("hello", "my-caller", "h1")
+	out := FormatTextBody("hello", "my-caller", "h1", nil)
 	if !strings.Contains(out, "hello") {
 		t.Fatal("missing body")
 	}
@@ -42,7 +42,7 @@ func TestRenderHTML_containsMetadata(t *testing.T) {
 		PublicIPv6:    "2001:db8::1",
 		ISP:           "ExampleISP",
 	}
-	html, err := RenderHTML("body\nline", "c1", "host1", si)
+	html, err := RenderHTML("body\nline", "c1", "host1", si, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestRenderHTML_containsMetadata(t *testing.T) {
 func TestRenderHTML_escapesBody(t *testing.T) {
 	t.Parallel()
 	si := CollectSysInfo(context.Background())
-	html, err := RenderHTML("<script>x</script>", "c", "h", si)
+	html, err := RenderHTML("<script>x</script>", "c", "h", si, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
