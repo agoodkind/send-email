@@ -37,9 +37,7 @@ func main() {
 		return s == "--http"
 	})
 
-	var (
-		to, subject, msg, from, name, caller, apiKey, bind string
-	)
+	var to, subject, msg, from, name, caller, apiKey, bind string
 	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	fs.StringVar(&to, "t", "", "")
