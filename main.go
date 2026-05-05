@@ -3,16 +3,17 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
 
 	"github.com/agoodkind/send-email/mailer"
 )
 
-func usage() {
-	fmt.Fprintf(os.Stderr, `Usage: %s -t TO -s SUBJECT -m MSG [OPTIONS]
+const usageText = `Usage: %s -t TO -s SUBJECT -m MSG [OPTIONS]
 
 Required:
   -t TO         Recipient email address
@@ -26,69 +27,95 @@ Optional:
   --http        Use SMTP2GO HTTP API instead of sendmail/msmtp
   -k API_KEY    SMTP2GO API key (optional if in env or env files)
   -i IFACE      Bind outbound HTTP to interface (HTTP mode only)
-`, os.Args[0])
-	os.Exit(1)
+`
+
+// errUsage is returned when CLI arguments are missing or invalid.
+var errUsage = errors.New("invalid usage")
+
+type cliArgs struct {
+	to, subject, msg, from, name, caller, apiKey, bind string
+	useHTTP                                            bool
 }
 
 func main() {
-	raw := os.Args[1:]
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	slog.Info("send-email start")
+	if err := run(context.Background(), os.Args); err != nil {
+		if errors.Is(err, errUsage) {
+			fmt.Fprintf(os.Stderr, usageText, os.Args[0])
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context, argv []string) error {
+	args, err := parseArgs(argv)
+	if err != nil {
+		return err
+	}
+	if args.apiKey == "" {
+		args.apiKey = mailer.LoadAPIKeyFromEnvFiles([]string{
+			"/etc/mwan-watchdog/watchdog.env",
+			"/etc/mwan/mwan.env",
+		})
+	}
+	cfg := mailer.Config{
+		SMTP2GOAPIKey:     args.apiKey,
+		MsmtprcPath:       "",
+		DefaultFromDomain: "",
+		BindInterface:     args.bind,
+		Transport:         mailer.MethodAuto,
+		Now:               nil,
+	}
+	if args.useHTTP {
+		cfg.Transport = mailer.MethodHTTP
+	}
+	m := mailer.New(cfg)
+	if err := m.Send(ctx, mailer.Message{
+		To:      args.to,
+		Subject: args.subject,
+		Body:    args.msg,
+		From:    args.from,
+		Name:    args.name,
+		Caller:  args.caller,
+	}); err != nil {
+		wrapped := fmt.Errorf("send: %w", err)
+		slog.ErrorContext(ctx, "send-email failed", "err", wrapped)
+		return wrapped
+	}
+	fmt.Printf("Email sent to %s via %s\n", args.to, m.Method())
+	return nil
+}
+
+func parseArgs(argv []string) (cliArgs, error) {
+	raw := argv[1:]
 	useHTTP := slices.Contains(raw, "--http")
 	filtered := slices.DeleteFunc(slices.Clone(raw), func(s string) bool {
 		return s == "--http"
 	})
 
-	var to, subject, msg, from, name, caller, apiKey, bind string
-	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	var args cliArgs
+	args.useHTTP = useHTTP
+	fs := flag.NewFlagSet(argv[0], flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	fs.StringVar(&to, "t", "", "")
-	fs.StringVar(&subject, "s", "", "")
-	fs.StringVar(&msg, "m", "", "")
-	fs.StringVar(&from, "f", "", "")
-	fs.StringVar(&name, "n", "", "")
-	fs.StringVar(&caller, "c", "", "")
-	fs.StringVar(&apiKey, "k", "", "")
-	fs.StringVar(&bind, "i", "", "")
+	fs.StringVar(&args.to, "t", "", "")
+	fs.StringVar(&args.subject, "s", "", "")
+	fs.StringVar(&args.msg, "m", "", "")
+	fs.StringVar(&args.from, "f", "", "")
+	fs.StringVar(&args.name, "n", "", "")
+	fs.StringVar(&args.caller, "c", "", "")
+	fs.StringVar(&args.apiKey, "k", "", "")
+	fs.StringVar(&args.bind, "i", "", "")
 	if err := fs.Parse(filtered); err != nil {
-		usage()
+		return cliArgs{}, fmt.Errorf("parse flags: %w", errUsage)
 	}
 	if fs.NArg() != 0 {
-		usage()
+		return cliArgs{}, errUsage
 	}
-
-	if to == "" || subject == "" || msg == "" {
-		usage()
+	if args.to == "" || args.subject == "" || args.msg == "" {
+		return cliArgs{}, errUsage
 	}
-
-	if apiKey == "" {
-		apiKey = mailer.LoadAPIKeyFromEnvFiles([]string{
-			"/etc/mwan-watchdog/watchdog.env",
-			"/etc/mwan/mwan.env",
-		})
-	}
-
-	cfg := mailer.Config{
-		SMTP2GOAPIKey: apiKey,
-		BindInterface: bind,
-	}
-	if useHTTP {
-		cfg.Transport = mailer.MethodHTTP
-	} else {
-		cfg.Transport = mailer.MethodAuto
-	}
-
-	m := mailer.New(cfg)
-	ctx := context.Background()
-	err := m.Send(ctx, mailer.Message{
-		To:      to,
-		Subject: subject,
-		Body:    msg,
-		From:    from,
-		Name:    name,
-		Caller:  caller,
-	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf("Email sent to %s via %s\n", to, m.Method())
+	return args, nil
 }
