@@ -55,10 +55,8 @@ $(GO_MK):
 
 # Project-local: DESTDIR-staged install for system packaging (deb/pkg).
 # Distinct from `make install` which goes to $XDG_BIN_HOME for personal use.
-.PHONY: install-binary deploy
+.PHONY: install-binary
 
 install-binary: build
 	install -d "$(DESTDIR)/opt/scripts"
 	install -m 0755 $(DIST_BIN) "$(DESTDIR)/opt/scripts/$(BINARY)"
-
-deploy: install-binary
