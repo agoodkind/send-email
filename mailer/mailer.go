@@ -205,10 +205,10 @@ func LoadAPIKeyFromEnvFiles(paths []string) string {
 func parseEnvFileKey(path, key string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("read env file %q: %w", path, err)
+		return "", errors.New("read env file")
 	}
 	prefix := key + "="
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "#") {
 			continue

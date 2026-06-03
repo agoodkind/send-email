@@ -109,7 +109,7 @@ func parseArgs(argv []string) (cliArgs, error) {
 	fs.StringVar(&args.apiKey, "k", "", "")
 	fs.StringVar(&args.bind, "i", "", "")
 	if err := fs.Parse(filtered); err != nil {
-		return cliArgs{}, fmt.Errorf("parse flags: %w", errUsage)
+		return cliArgs{}, errUsage
 	}
 	if fs.NArg() != 0 {
 		return cliArgs{}, errUsage

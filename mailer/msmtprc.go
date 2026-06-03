@@ -30,34 +30,50 @@ type msmtpPartial struct {
 	trustFile                  string
 }
 
+// msmtpFieldKey names the recognized account/defaults field keys in an
+// msmtprc block.
+type msmtpFieldKey string
+
+const (
+	fieldHost         msmtpFieldKey = "host"
+	fieldPort         msmtpFieldKey = "port"
+	fieldUser         msmtpFieldKey = "user"
+	fieldPassword     msmtpFieldKey = "password"
+	fieldFrom         msmtpFieldKey = "from"
+	fieldAuth         msmtpFieldKey = "auth"
+	fieldTLS          msmtpFieldKey = "tls"
+	fieldTLSStartTLS  msmtpFieldKey = "tls_starttls"
+	fieldTLSTrustFile msmtpFieldKey = "tls_trust_file"
+)
+
 func (m *msmtpPartial) applyLine(key string, parts []string) {
 	if len(parts) < 2 {
 		return
 	}
 	val := parts[1]
-	switch key {
-	case "host":
+	switch msmtpFieldKey(key) {
+	case fieldHost:
 		m.host = val
-	case "port":
+	case fieldPort:
 		if p, err := strconv.Atoi(val); err == nil {
 			m.port = p
 		}
-	case "user":
+	case fieldUser:
 		m.user = val
-	case "password":
+	case fieldPassword:
 		m.password = val
-	case "from":
+	case fieldFrom:
 		m.from = val
-	case "auth":
+	case fieldAuth:
 		v := strings.ToLower(val) == "login"
 		m.authLogin = &v
-	case "tls":
+	case fieldTLS:
 		v := strings.ToLower(val) == "on"
 		m.tls = &v
-	case "tls_starttls":
+	case fieldTLSStartTLS:
 		v := strings.ToLower(val) == "on"
 		m.tlsStartTLS = &v
-	case "tls_trust_file":
+	case fieldTLSTrustFile:
 		m.trustFile = val
 	}
 }
@@ -114,6 +130,14 @@ func mergeMsmtp(defaults, acc msmtpPartial) Account {
 	return out
 }
 
+// msmtpDirective names the top-level block directives in an msmtprc file.
+type msmtpDirective string
+
+const (
+	directiveDefaults msmtpDirective = "defaults"
+	directiveAccount  msmtpDirective = "account"
+)
+
 // ParseMsmtprc parses /etc/msmtprc-style content for the default account.
 func ParseMsmtprc(data []byte) (Account, error) {
 	var defaults msmtpPartial
@@ -121,8 +145,7 @@ func ParseMsmtprc(data []byte) (Account, error) {
 	var defaultAlias string
 	block := ""
 
-	lines := strings.Split(string(data), "\n")
-	for _, raw := range lines {
+	for raw := range strings.SplitSeq(string(data), "\n") {
 		line := strings.TrimSpace(raw)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
@@ -132,10 +155,10 @@ func ParseMsmtprc(data []byte) (Account, error) {
 			continue
 		}
 		key := strings.ToLower(parts[0])
-		switch key {
-		case "defaults":
+		switch msmtpDirective(key) {
+		case directiveDefaults:
 			block = "defaults"
-		case "account":
+		case directiveAccount:
 			if len(parts) >= 4 && strings.ToLower(parts[1]) == "default" &&
 				parts[2] == ":" {
 				defaultAlias = parts[3]

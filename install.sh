@@ -5,12 +5,12 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$root"
 
-if ! command -v go >/dev/null 2>&1; then
-	echo "Error: go not found in PATH" >&2
+if ! command -v make >/dev/null 2>&1; then
+	echo "Error: make not found in PATH" >&2
 	exit 1
 fi
 
-go build -o send-email .
+make build
 
 target="/opt/scripts/send-email"
 if [[ ! -w "$(dirname "$target")" ]]; then

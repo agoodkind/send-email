@@ -175,9 +175,7 @@ func firstHTTPBody(ctx context.Context, network dialNetwork, urls []string, time
 	client.Transport = tr
 
 	for _, u := range urls {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			defer func() {
 				if r := recover(); r != nil {
 					slog.ErrorContext(parent, "firstHTTPBody panic",
@@ -186,7 +184,7 @@ func firstHTTPBody(ctx context.Context, network dialNetwork, urls []string, time
 				}
 			}()
 			fetchInto(parent, client, u, &mu, &winner)
-		}()
+		})
 	}
 	wg.Wait()
 	if winner != "" {

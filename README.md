@@ -10,9 +10,9 @@ Go CLI and library for sending email through **msmtp-compatible SMTP** (default)
 
 ```bash
 make build
-# or
-go build -o send-email .
 ```
+
+`make build` refreshes the shared `go-makefile` include at parse time, runs the shared non-test build checks, and then builds `./send-email`.
 
 ## Install
 
@@ -24,21 +24,19 @@ This compiles the binary and installs it to `/opt/scripts/send-email` (uses `sud
 
 ## Usage
 
-```
+```text
 send-email -t TO -s SUBJECT -m MSG [OPTIONS]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-t` | Recipient |
-| `-s` | Subject |
-| `-m` | Body (`\n` in the string becomes a newline) |
-| `-f` | From address (default: `$(hostname)-mailer@goodkind.io`) |
-| `-n` | Sender display name (default: hostname) |
-| `-c` | Caller label in metadata (default: `send-email`) |
-| `--http` | Force SMTP2GO HTTP API |
-| `-k` | SMTP2GO API key (optional if `SMTP2GO_API_KEY` env or env files below) |
-| `-i` | Outbound interface name (HTTP mode only) |
+- `-t`: Recipient
+- `-s`: Subject
+- `-m`: Body (`\n` in the string becomes a newline)
+- `-f`: From address (default: `$(hostname)-mailer@goodkind.io`)
+- `-n`: Sender display name (default: hostname)
+- `-c`: Caller label in metadata (default: `send-email`)
+- `--http`: Force SMTP2GO HTTP API
+- `-k`: SMTP2GO API key (optional if `SMTP2GO_API_KEY` env or env files below)
+- `-i`: Outbound interface name (HTTP mode only)
 
 API key resolution for HTTP mode: `-k`, then `SMTP2GO_API_KEY` in the environment, then `/etc/mwan-watchdog/watchdog.env`, then `/etc/mwan/mwan.env`.
 

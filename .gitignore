@@ -2,6 +2,9 @@
 send-email
 send-email-linux-amd64
 
+# go-makefile cache
+.make/
+
 # Test cache
 /tmp/
 
