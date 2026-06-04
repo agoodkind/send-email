@@ -10,7 +10,7 @@ import (
 	"os"
 	"slices"
 
-	"github.com/agoodkind/send-email/mailer"
+	"goodkind.io/send-email/mailer"
 )
 
 const usageText = `Usage: %s -t TO -s SUBJECT -m MSG [OPTIONS]

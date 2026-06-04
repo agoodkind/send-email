@@ -3,7 +3,7 @@ package mailer
 import (
 	"time"
 
-	"github.com/agoodkind/send-email/internal/clock"
+	"goodkind.io/send-email/internal/clock"
 )
 
 // Clock returns the current time. Inject a stub in tests.
