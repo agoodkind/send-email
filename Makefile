@@ -12,17 +12,13 @@
 BINARY := send-email
 CMD    := .
 
+# send-email installs system-wide. go-mk install copies into INSTALL_DIR
+# through sudo when the directory is not writable.
+INSTALL_DIR := /opt/scripts
+
 # Pipeline modules
 GO_MK_MODULES := go-build.mk go-release.mk
 
 include bootstrap.mk
 
 .DEFAULT_GOAL := check
-
-# Project-local: DESTDIR-staged install for system packaging (deb/pkg).
-# Distinct from `make install` which goes to $XDG_BIN_HOME for personal use.
-.PHONY: install-binary
-
-install-binary: build
-	install -d "$(DESTDIR)/opt/scripts"
-	install -m 0755 $(DIST_BIN) "$(DESTDIR)/opt/scripts/$(BINARY)"
