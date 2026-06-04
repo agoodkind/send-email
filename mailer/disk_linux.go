@@ -13,8 +13,12 @@ func linuxDiskRoot() string {
 	if err != nil {
 		return "N/A"
 	}
-	total := st.Blocks * uint64(st.Bsize)
-	free := st.Bavail * uint64(st.Bsize)
+	if st.Bsize < 0 {
+		return "N/A"
+	}
+	bsize := uint64(st.Bsize)
+	total := st.Blocks * bsize
+	free := st.Bavail * bsize
 	used := total - free
 	pct := float64(0)
 	if total > 0 {
