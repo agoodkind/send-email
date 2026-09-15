@@ -41,6 +41,13 @@ type Config struct {
 	Now Clock
 }
 
+// Table is one escaped table rendered after the message body.
+type Table struct {
+	Caption string
+	Headers []string
+	Rows    [][]string
+}
+
 // Message is one outbound email.
 type Message struct {
 	To      string
@@ -49,6 +56,7 @@ type Message struct {
 	From    string
 	Name    string
 	Caller  string
+	Tables  []Table
 }
 
 // Mailer sends email via SMTP2GO HTTP or msmtp-compatible SMTP.
@@ -81,6 +89,9 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 	si := CollectSysInfo(ctx)
 	textBody := FormatTextBody(msg.Body, caller, host, m.cfg.Now)
 	htmlBody, err := RenderHTML(msg.Body, caller, host, si, m.cfg.Now)
+	if len(msg.Tables) > 0 {
+		htmlBody, err = renderHTML(msg.Body, msg.Tables, caller, host, si, m.cfg.Now)
+	}
 	if err != nil {
 		return fmt.Errorf("render html: %w", err)
 	}

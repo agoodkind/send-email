@@ -26,6 +26,7 @@ type ipRow struct {
 type htmlEmailData struct {
 	Preheader string
 	BodyLines []string
+	Tables    []Table
 	Caller    string
 	TimeStr   string
 	Hostname  string
@@ -45,6 +46,10 @@ type htmlEmailData struct {
 // now defaults to [SystemClock] when nil; callers may inject a clock for
 // deterministic tests.
 func RenderHTML(msg, caller, hostname string, si SysInfo, now Clock) (string, error) {
+	return renderHTML(msg, nil, caller, hostname, si, now)
+}
+
+func renderHTML(msg string, tables []Table, caller string, hostname string, si SysInfo, now Clock) (string, error) {
 	if now == nil {
 		now = SystemClock
 	}
@@ -54,6 +59,7 @@ func RenderHTML(msg, caller, hostname string, si SysInfo, now Clock) (string, er
 	data := htmlEmailData{
 		Preheader: oneLine,
 		BodyLines: bodyLines,
+		Tables:    tables,
 		Caller:    caller,
 		TimeStr:   now().Format("2006-01-02 15:04:05 MST"),
 		Hostname:  hostname,
