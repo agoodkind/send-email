@@ -87,7 +87,11 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 	from, name, caller := m.resolveIdentity(msg, host)
 
 	si := CollectSysInfo(ctx)
-	textBody := FormatTextBody(msg.Body, caller, host, m.cfg.Now)
+	textMessage := msg.Body
+	if len(msg.Tables) > 0 {
+		textMessage = formatTextTables(textMessage, msg.Tables)
+	}
+	textBody := FormatTextBody(textMessage, caller, host, m.cfg.Now)
 	htmlBody, err := RenderHTML(msg.Body, caller, host, si, m.cfg.Now)
 	if len(msg.Tables) > 0 {
 		htmlBody, err = renderHTML(msg.Body, msg.Tables, caller, host, si, m.cfg.Now)

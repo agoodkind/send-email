@@ -119,3 +119,20 @@ func FormatTextBody(msg, caller, hostname string, now Clock) string {
 		now().Format("2006-01-02 15:04:05 MST"),
 	)
 }
+
+func formatTextTables(body string, tables []Table) string {
+	lines := []string{body}
+	for _, table := range tables {
+		lines = append(lines, "")
+		if table.Caption != "" {
+			lines = append(lines, table.Caption)
+		}
+		if len(table.Headers) > 0 {
+			lines = append(lines, strings.Join(table.Headers, " | "))
+		}
+		for _, row := range table.Rows {
+			lines = append(lines, strings.Join(row, " | "))
+		}
+	}
+	return strings.Join(lines, "\n")
+}
