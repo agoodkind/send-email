@@ -1,29 +1,61 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
 <style>
-body { font: 14px -apple-system, BlinkMacSystemFont, Arial, sans-serif; margin: 0 }
+body { margin: 0; padding: 0; background: #ffffff; color: #1f2328; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif }
+.wrap { max-width: 760px; padding: 16px }
+.headline { margin: 0 0 14px; font-size: 19px; line-height: 1.3; font-weight: 600; color: #1f2328 }
+.para { margin: 0 0 14px; color: #1f2328 }
+.fields { width: 100%; border-collapse: collapse; margin: 0 0 14px; font-size: 14px }
+.fields th, .fields td { padding: 7px 0; border-bottom: 1px solid #e4e6e8; text-align: left; vertical-align: top }
+.fields .k { width: 34%; padding-right: 12px; font-weight: 400; color: #5b636b }
+.fields .v { color: #1f2328; word-break: break-word }
+.fields .wide { width: auto; padding-bottom: 2px; border-bottom: 0 }
+.out { margin: 0; padding: 8px 10px; background: #f5f6f7; border: 1px solid #e4e6e8; border-radius: 4px; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #1f2328; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere }
 .report { width: 100%; max-width: 760px; margin-top: 16px; border-collapse: collapse; font-size: 13px }
 .report caption { padding: 0 0 8px; text-align: left; font-size: 15px; font-weight: 600 }
 .report th { padding: 8px 10px; border-bottom: 2px solid rgba(128,128,128,0.35); background: rgba(128,128,128,0.1); text-align: left; font-weight: 600 }
 .report td { padding: 9px 10px; border-bottom: 1px solid rgba(128,128,128,0.2); vertical-align: top }
-@media only screen and (max-width: 600px) {
-  .report { font-size: 12px }
-  .report th, .report td { padding: 7px 5px }
-}
 .meta { margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(128,128,128,0.2); font-size: 11px; opacity: 0.6 }
 .meta table { border-collapse: collapse }
 .meta td { padding: 1px 0 }
 .meta .k { padding-right: 12px; opacity: 0.7 }
+@media only screen and (max-width: 600px) {
+  .wrap { padding: 12px }
+  .headline { font-size: 17px }
+  .fields { font-size: 13px }
+  .fields .k { width: 40%; padding-right: 8px }
+  .out { font-size: 11px; padding: 7px 8px }
+  .report { font-size: 12px }
+  .report th, .report td { padding: 7px 5px }
+}
+@media (prefers-color-scheme: dark) {
+  body { background: #17191b !important; color: #e6e8ea !important }
+  .headline, .para, .fields .v { color: #e6e8ea !important }
+  .fields .k { color: #a3abb2 !important }
+  .fields th, .fields td { border-bottom-color: #2e3235 !important }
+  .out { background: #202426 !important; border-color: #2e3235 !important; color: #e6e8ea !important }
+}
 </style>
 </head>
 <body>
 <div style="display:none;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;font-family:sans-serif;">
-{{.Preheader}}<span aria-hidden="true">&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</span>
+{{.Preheader}}<span aria-hidden="true">&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</span>
 </div>
-<div>{{range $i, $line := .BodyLines}}{{if $i}}<br>
-{{end}}{{$line}}{{end}}</div>
-{{range .Tables}}
+<div class="wrap">
+{{if .Headline}}<h1 class="headline">{{.Headline}}</h1>
+{{end}}{{range .Blocks}}{{if .Fields}}<table class="fields">
+  <tbody>
+{{range .Fields}}{{if .Multiline}}    <tr><th class="k wide" colspan="2" scope="row">{{.Label}}</th></tr>
+    <tr><td class="v" colspan="2"><pre class="out">{{.Value}}</pre></td></tr>
+{{else}}    <tr><th class="k" scope="row">{{.Label}}</th><td class="v">{{.Value}}</td></tr>
+{{end}}{{end}}  </tbody>
+</table>
+{{end}}{{if .Paragraph}}<p class="para">{{range $i, $line := .Paragraph}}{{if $i}}<br>
+{{end}}{{$line}}{{end}}</p>
+{{end}}{{end}}{{range .Tables}}
 <table class="report">
   {{if .Caption}}<caption>{{.Caption}}</caption>{{end}}
   {{if .Headers}}<thead><tr>{{range .Headers}}<th scope="col">{{.}}</th>{{end}}</tr></thead>{{end}}
@@ -45,6 +77,7 @@ body { font: 14px -apple-system, BlinkMacSystemFont, Arial, sans-serif; margin: 
   {{range .Local4}}<tr><td class="k">{{.Iface}}</td><td>{{.IP}}</td></tr>{{end}}
   {{range .Local6}}<tr><td class="k">{{.Iface}}</td><td>{{.IP}}</td></tr>{{end}}
 </table>
+</div>
 </div>
 </body>
 </html>

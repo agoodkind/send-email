@@ -23,9 +23,33 @@ type ipRow struct {
 	IP    string
 }
 
+// bodyField is one "Label: value" pair parsed out of the plain body.
+// Value holds every line of the value; Multiline marks the ones that need a
+// preformatted block rather than a table cell.
+type bodyField struct {
+	Label     string
+	Value     string
+	Multiline bool
+}
+
+// bodyBlock is one blank-line-separated block of the plain body. A block is
+// either a run of fields or a paragraph of free text, never both.
+type bodyBlock struct {
+	Paragraph []string
+	Fields    []bodyField
+}
+
+// parsedBody is the plain body split into the shape the HTML template
+// renders: a headline above blocks of fields and paragraphs.
+type parsedBody struct {
+	Headline string
+	Blocks   []bodyBlock
+}
+
 type htmlEmailData struct {
 	Preheader string
-	BodyLines []string
+	Headline  string
+	Blocks    []bodyBlock
 	Tables    []Table
 	Caller    string
 	TimeStr   string
@@ -41,7 +65,10 @@ type htmlEmailData struct {
 	Local6    []ipRow
 }
 
-// RenderHTML builds the multipart HTML body with a metadata footer.
+// RenderHTML builds the multipart HTML body with a metadata footer. It reads
+// the structure alert senders already put in the plain body (see [parseBody])
+// and renders the headline as a heading, "Label: value" pairs as a table, and
+// a multi-line value as a preformatted block.
 //
 // now defaults to [SystemClock] when nil; callers may inject a clock for
 // deterministic tests.
@@ -55,10 +82,11 @@ func renderHTML(msg string, tables []Table, caller string, hostname string, si S
 	}
 	plainBody := RenderPlain(msg)
 	oneLine := strings.ReplaceAll(strings.TrimSpace(plainBody), "\n", " ")
-	bodyLines := strings.Split(plainBody, "\n")
+	parsed := parseBody(plainBody)
 	data := htmlEmailData{
 		Preheader: oneLine,
-		BodyLines: bodyLines,
+		Headline:  parsed.Headline,
+		Blocks:    parsed.Blocks,
 		Tables:    tables,
 		Caller:    caller,
 		TimeStr:   now().Format("2006-01-02 15:04:05 MST"),
@@ -86,6 +114,137 @@ func renderHTML(msg string, tables []Table, caller string, hostname string, si S
 		return "", wrapped
 	}
 	return buf.String(), nil
+}
+
+// Label shape limits. A label is short and word-like; anything longer or
+// odder is prose that happens to contain a colon.
+const (
+	fieldLabelMaxChars = 40
+	fieldLabelMaxWords = 4
+)
+
+// parseBody recovers the structure alert senders put in the plain body: the
+// first non-empty line is the headline, a "Label: value" line opens a field,
+// a following line that is not itself a label continues that field's value, a
+// blank line closes the block, and free text outside any field is a
+// paragraph.
+func parseBody(plain string) parsedBody {
+	lines := strings.Split(plain, "\n")
+	parser := &bodyParser{}
+	rest := lines
+	for index, line := range lines {
+		if strings.TrimSpace(line) != "" {
+			parser.out.Headline = strings.TrimSpace(line)
+			rest = lines[index+1:]
+			break
+		}
+	}
+	for _, line := range rest {
+		parser.addLine(line)
+	}
+	parser.closeBlock()
+	return parser.out
+}
+
+// bodyParser accumulates one parsedBody line by line. An open field keeps
+// collecting continuation lines until a label line or a blank line ends it.
+type bodyParser struct {
+	out       parsedBody
+	block     bodyBlock
+	label     string
+	value     []string
+	fieldOpen bool
+}
+
+func (p *bodyParser) addLine(line string) {
+	if strings.TrimSpace(line) == "" {
+		p.closeBlock()
+		return
+	}
+	if label, value, ok := splitField(line); ok {
+		p.closeField()
+		if len(p.block.Paragraph) > 0 {
+			p.closeBlock()
+		}
+		p.label = label
+		p.value = nil
+		if value != "" {
+			p.value = []string{value}
+		}
+		p.fieldOpen = true
+		return
+	}
+	if p.fieldOpen {
+		p.value = append(p.value, strings.TrimRight(line, " \t"))
+		return
+	}
+	p.block.Paragraph = append(p.block.Paragraph, strings.TrimSpace(line))
+}
+
+func (p *bodyParser) closeField() {
+	if !p.fieldOpen {
+		return
+	}
+	p.block.Fields = append(p.block.Fields, bodyField{
+		Label:     p.label,
+		Value:     strings.Join(p.value, "\n"),
+		Multiline: len(p.value) > 1,
+	})
+	p.label = ""
+	p.value = nil
+	p.fieldOpen = false
+}
+
+func (p *bodyParser) closeBlock() {
+	p.closeField()
+	if len(p.block.Fields) > 0 || len(p.block.Paragraph) > 0 {
+		p.out.Blocks = append(p.out.Blocks, p.block)
+	}
+	p.block = bodyBlock{}
+}
+
+// splitField reports whether line opens a field. Only label-shaped text
+// before the first colon counts, so a wrapped command error such as
+// "snapshot create failed: starting cleanup" continues the field above it
+// instead of opening a new one.
+func splitField(line string) (label, value string, ok bool) {
+	trimmed := strings.TrimRight(line, " \t")
+	colon := strings.Index(trimmed, ":")
+	if colon <= 0 {
+		return "", "", false
+	}
+	label = trimmed[:colon]
+	if !isFieldLabel(label) {
+		return "", "", false
+	}
+	return label, strings.TrimSpace(trimmed[colon+1:]), true
+}
+
+// isFieldLabel reports whether label looks like an alert field name. Senders
+// capitalize their keys, so an upper-case first letter separates a real label
+// from a lower-case sentence fragment inside a multi-line value.
+func isFieldLabel(label string) bool {
+	if label == "" || len(label) > fieldLabelMaxChars {
+		return false
+	}
+	if label[0] < 'A' || label[0] > 'Z' {
+		return false
+	}
+	if strings.HasSuffix(label, " ") {
+		return false
+	}
+	words := 1
+	for _, r := range label {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+		case r == '_', r == '-', r == '.':
+		case r == ' ':
+			words++
+		default:
+			return false
+		}
+	}
+	return words <= fieldLabelMaxWords
 }
 
 func parseIPRows(lines []string) []ipRow {
