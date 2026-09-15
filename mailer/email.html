@@ -3,6 +3,14 @@
 <head>
 <style>
 body { font: 14px -apple-system, BlinkMacSystemFont, Arial, sans-serif; margin: 0 }
+.report { width: 100%; max-width: 760px; margin-top: 16px; border-collapse: collapse; font-size: 13px }
+.report caption { padding: 0 0 8px; text-align: left; font-size: 15px; font-weight: 600 }
+.report th { padding: 8px 10px; border-bottom: 2px solid rgba(128,128,128,0.35); background: rgba(128,128,128,0.1); text-align: left; font-weight: 600 }
+.report td { padding: 9px 10px; border-bottom: 1px solid rgba(128,128,128,0.2); vertical-align: top }
+@media only screen and (max-width: 600px) {
+  .report { font-size: 12px }
+  .report th, .report td { padding: 7px 5px }
+}
 .meta { margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(128,128,128,0.2); font-size: 11px; opacity: 0.6 }
 .meta table { border-collapse: collapse }
 .meta td { padding: 1px 0 }
@@ -15,6 +23,13 @@ body { font: 14px -apple-system, BlinkMacSystemFont, Arial, sans-serif; margin: 
 </div>
 <div>{{range $i, $line := .BodyLines}}{{if $i}}<br>
 {{end}}{{$line}}{{end}}</div>
+{{range .Tables}}
+<table class="report">
+  {{if .Caption}}<caption>{{.Caption}}</caption>{{end}}
+  {{if .Headers}}<thead><tr>{{range .Headers}}<th scope="col">{{.}}</th>{{end}}</tr></thead>{{end}}
+  <tbody>{{range .Rows}}<tr>{{range .}}<td>{{.}}</td>{{end}}</tr>{{end}}</tbody>
+</table>
+{{end}}
 <div class="meta">
 <table>
   <tr><td class="k">Caller</td><td>{{.Caller}}</td></tr>
