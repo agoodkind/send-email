@@ -27,6 +27,7 @@ type htmlEmailData struct {
 	Preheader string
 	BodyLines []string
 	Tables    []Table
+	HTMLBlock template.HTML
 	Caller    string
 	TimeStr   string
 	Hostname  string
@@ -41,15 +42,26 @@ type htmlEmailData struct {
 	Local6    []ipRow
 }
 
-// RenderHTML builds the multipart HTML body with a metadata footer.
+// RenderHTML builds the HTML body with a metadata footer.
 //
 // now defaults to [SystemClock] when nil; callers may inject a clock for
 // deterministic tests.
 func RenderHTML(msg, caller, hostname string, si SysInfo, now Clock) (string, error) {
-	return renderHTML(msg, nil, caller, hostname, si, now)
+	return renderHTML(msg, nil, "", caller, hostname, si, now)
 }
 
-func renderHTML(msg string, tables []Table, caller string, hostname string, si SysInfo, now Clock) (string, error) {
+// renderHTML builds the HTML body with a metadata footer. rawHTML comes from
+// [Message.HTML] and reaches the template unescaped, so only a caller that
+// owns that string may set it.
+func renderHTML(
+	msg string,
+	tables []Table,
+	rawHTML string,
+	caller string,
+	hostname string,
+	si SysInfo,
+	now Clock,
+) (string, error) {
 	if now == nil {
 		now = SystemClock
 	}
@@ -60,6 +72,9 @@ func renderHTML(msg string, tables []Table, caller string, hostname string, si S
 		Preheader: oneLine,
 		BodyLines: bodyLines,
 		Tables:    tables,
+		// #nosec G203 -- Message.HTML is the caller's own markup, documented as
+		// trusted and never built from network input.
+		HTMLBlock: template.HTML(rawHTML),
 		Caller:    caller,
 		TimeStr:   now().Format("2006-01-02 15:04:05 MST"),
 		Hostname:  hostname,

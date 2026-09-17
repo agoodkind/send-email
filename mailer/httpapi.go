@@ -3,6 +3,7 @@ package mailer
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -43,7 +44,28 @@ type smtp2goPayload struct {
 	Subject       string          `json:"subject"`
 	TextBody      string          `json:"text_body"`
 	HTMLBody      string          `json:"html_body,omitempty"`
+	Inlines       []smtp2goFile   `json:"inlines,omitempty"`
 	CustomHeaders []smtp2goHeader `json:"custom_headers,omitempty"`
+}
+
+// smtp2goFile is one inline image. SMTP2GO takes the bytes base64 encoded and
+// serves them to the HTML part as cid:Filename.
+type smtp2goFile struct {
+	Filename string `json:"filename"`
+	FileBlob string `json:"fileblob"`
+	MIMEType string `json:"mimetype"`
+}
+
+func smtp2goInlines(images []InlineImage) []smtp2goFile {
+	files := make([]smtp2goFile, 0, len(images))
+	for _, image := range images {
+		files = append(files, smtp2goFile{
+			Filename: image.Filename,
+			FileBlob: base64.StdEncoding.EncodeToString(image.Data),
+			MIMEType: image.MIMEType,
+		})
+	}
+	return files
 }
 
 type smtp2goHeader struct {
@@ -63,6 +85,7 @@ type smtp2goResponseData struct {
 func sendSMTP2GOHTTP(
 	ctx context.Context,
 	apiKey, from, to, subject, textBody, htmlBody, senderName string,
+	inlines []InlineImage,
 	bindIface string,
 ) error {
 	payload := smtp2goPayload{
@@ -72,6 +95,7 @@ func sendSMTP2GOHTTP(
 		Subject:       subject,
 		TextBody:      textBody,
 		HTMLBody:      htmlBody,
+		Inlines:       smtp2goInlines(inlines),
 		CustomHeaders: nil,
 	}
 	if senderName != "" {

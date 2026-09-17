@@ -3,6 +3,7 @@ package mailer
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"net"
@@ -17,26 +18,64 @@ const dialTimeout = 30 * time.Second
 
 func buildMIMEMessage(
 	fromDisplay, fromAddr, to, subject, boundary, textPart, htmlPart string,
+	inlines []InlineImage,
 ) []byte {
 	var b strings.Builder
 	fmt.Fprintf(&b, "From: %s <%s>\r\n", fromDisplay, fromAddr)
 	fmt.Fprintf(&b, "To: %s\r\n", to)
 	fmt.Fprintf(&b, "Subject: %s\r\n", subject)
 	b.WriteString("MIME-Version: 1.0\r\n")
-	fmt.Fprintf(&b,
-		"Content-Type: multipart/alternative; boundary=%q\r\n\r\n",
-		boundary,
-	)
-	fmt.Fprintf(&b, "--%s\r\n", boundary)
+	if len(inlines) == 0 {
+		fmt.Fprintf(&b,
+			"Content-Type: multipart/alternative; boundary=%q\r\n\r\n",
+			boundary,
+		)
+		writeAlternative(&b, boundary, textPart, htmlPart)
+		return []byte(b.String())
+	}
+	// Inline images ride in a related part beside the alternative one, so the
+	// HTML can reach them through cid: while a text-only reader still gets the
+	// plain part.
+	related := boundary + "_rel"
+	fmt.Fprintf(&b, "Content-Type: multipart/related; boundary=%q; type=%q\r\n\r\n", related, "multipart/alternative")
+	fmt.Fprintf(&b, "--%s\r\n", related)
+	fmt.Fprintf(&b, "Content-Type: multipart/alternative; boundary=%q\r\n\r\n", boundary)
+	writeAlternative(&b, boundary, textPart, htmlPart)
+	for _, image := range inlines {
+		fmt.Fprintf(&b, "--%s\r\n", related)
+		fmt.Fprintf(&b, "Content-Type: %s\r\n", image.MIMEType)
+		b.WriteString("Content-Transfer-Encoding: base64\r\n")
+		fmt.Fprintf(&b, "Content-ID: <%s>\r\n", image.Filename)
+		fmt.Fprintf(&b, "Content-Disposition: inline; filename=%q\r\n\r\n", image.Filename)
+		b.WriteString(wrapBase64(image.Data))
+		b.WriteString("\r\n")
+	}
+	fmt.Fprintf(&b, "--%s--\r\n", related)
+	return []byte(b.String())
+}
+
+func writeAlternative(b *strings.Builder, boundary, textPart, htmlPart string) {
+	fmt.Fprintf(b, "--%s\r\n", boundary)
 	b.WriteString("Content-Type: text/plain; charset=UTF-8\r\n\r\n")
 	b.WriteString(textPart)
 	b.WriteString("\r\n\r\n")
-	fmt.Fprintf(&b, "--%s\r\n", boundary)
+	fmt.Fprintf(b, "--%s\r\n", boundary)
 	b.WriteString("Content-Type: text/html; charset=UTF-8\r\n\r\n")
 	b.WriteString(htmlPart)
 	b.WriteString("\r\n\r\n")
-	fmt.Fprintf(&b, "--%s--\r\n", boundary)
-	return []byte(b.String())
+	fmt.Fprintf(b, "--%s--\r\n", boundary)
+}
+
+// wrapBase64 breaks the encoding into the 76 character lines RFC 2045 asks for.
+func wrapBase64(data []byte) string {
+	encoded := base64.StdEncoding.EncodeToString(data)
+	var out strings.Builder
+	for start := 0; start < len(encoded); start += base64LineLength {
+		end := min(start+base64LineLength, len(encoded))
+		out.WriteString(encoded[start:end])
+		out.WriteString("\r\n")
+	}
+	return out.String()
 }
 
 func sendSMTPMSMTPCfg(
@@ -101,3 +140,6 @@ func sendSMTPMSMTPCfg(
 	slog.InfoContext(ctx, "smtp send ok", "host", acc.Host, "to", to)
 	return nil
 }
+
+// base64LineLength is the line width RFC 2045 sets for base64 bodies.
+const base64LineLength = 76

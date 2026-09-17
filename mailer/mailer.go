@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -48,6 +49,15 @@ type Table struct {
 	Rows    [][]string
 }
 
+// InlineImage is one image carried inside the message and referenced from
+// [Message.HTML] as cid:Filename, so it renders in place rather than as a
+// download.
+type InlineImage struct {
+	Filename string
+	MIMEType string
+	Data     []byte
+}
+
 // Message is one outbound email.
 type Message struct {
 	To      string
@@ -57,6 +67,13 @@ type Message struct {
 	Name    string
 	Caller  string
 	Tables  []Table
+	// HTML is inserted into the HTML part verbatim, after the body and before
+	// the tables. The caller owns its correctness and its escaping; it is not
+	// escaped here, so never build it from untrusted input. The plain text
+	// part does not carry it.
+	HTML string
+	// Inlines are images referenced from HTML as cid:Filename.
+	Inlines []InlineImage
 }
 
 // Mailer sends email via SMTP2GO HTTP or msmtp-compatible SMTP.
@@ -92,14 +109,17 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 		textMessage = formatTextTables(textMessage, msg.Tables)
 	}
 	textBody := FormatTextBody(textMessage, caller, host, m.cfg.Now)
-	htmlBody, err := RenderHTML(msg.Body, caller, host, si, m.cfg.Now)
-	if len(msg.Tables) > 0 {
-		htmlBody, err = renderHTML(msg.Body, msg.Tables, caller, host, si, m.cfg.Now)
+	var htmlBody string
+	if len(msg.Tables) == 0 && msg.HTML == "" {
+		htmlBody, err = RenderHTML(msg.Body, caller, host, si, m.cfg.Now)
+	} else {
+		htmlBody, err = renderHTML(msg.Body, msg.Tables, msg.HTML, caller, host, si, m.cfg.Now)
 	}
 	if err != nil {
 		return fmt.Errorf("render html: %w", err)
 	}
 
+	msg.Inlines = validInlines(ctx, msg.Inlines)
 	method := m.resolveMethod()
 	slog.InfoContext(ctx, "send-email dispatch",
 		"transport", string(method),
@@ -171,7 +191,7 @@ func (m *Mailer) sendHTTP(
 		return err
 	}
 	bind := m.cfg.BindInterface
-	return sendSMTP2GOHTTP(ctx, key, from, msg.To, msg.Subject, textBody, htmlBody, name, bind)
+	return sendSMTP2GOHTTP(ctx, key, from, msg.To, msg.Subject, textBody, htmlBody, name, msg.Inlines, bind)
 }
 
 func (m *Mailer) sendSMTP(
@@ -190,7 +210,7 @@ func (m *Mailer) sendSMTP(
 		return fmt.Errorf("msmtprc: %w", err)
 	}
 	boundary := fmt.Sprintf("----=_Part_%d_%d", m.cfg.Now().Unix(), os.Getpid())
-	mime := buildMIMEMessage(name, from, msg.To, msg.Subject, boundary, textBody, htmlBody)
+	mime := buildMIMEMessage(name, from, msg.To, msg.Subject, boundary, textBody, htmlBody, msg.Inlines)
 	return sendSMTPMSMTPCfg(ctx, acc, from, msg.To, mime)
 }
 
@@ -254,4 +274,38 @@ func AtoiDefault(s string, def int) int {
 		return def
 	}
 	return n
+}
+
+// errInlineFilename and errInlineMIMEType name why an inline image was left
+// out, so the log line carries a cause rather than only the offending value.
+var (
+	errInlineFilename = errors.New("inline filename must be letters, digits, dot, dash, or underscore")
+	errInlineMIMEType = errors.New("inline mimetype must be one type/subtype pair")
+)
+
+// inlineFilename matches the names a Content-ID and a cid: reference can carry
+// safely: letters, digits, dot, dash, and underscore.
+var inlineFilename = regexp.MustCompile(`^[A-Za-z0-9._-]{1,120}$`)
+
+// inlineMIMEType matches one RFC 2045 type/subtype pair of tokens.
+var inlineMIMEType = regexp.MustCompile(`^[A-Za-z0-9!#$%&'*+.^_` + "`" + `|~-]+/[A-Za-z0-9!#$%&'*+.^_` + "`" + `|~-]+$`)
+
+// validInlines drops any image whose name or media type could break out of a
+// MIME header, since both reach header lines verbatim on the SMTP path.
+func validInlines(ctx context.Context, images []InlineImage) []InlineImage {
+	kept := make([]InlineImage, 0, len(images))
+	for _, image := range images {
+		if !inlineFilename.MatchString(image.Filename) {
+			slog.ErrorContext(ctx, "send-email inline filename rejected",
+				"err", errInlineFilename, "filename", image.Filename)
+			continue
+		}
+		if !inlineMIMEType.MatchString(image.MIMEType) {
+			slog.ErrorContext(ctx, "send-email inline mimetype rejected",
+				"err", errInlineMIMEType, "mimetype", image.MIMEType)
+			continue
+		}
+		kept = append(kept, image)
+	}
+	return kept
 }
