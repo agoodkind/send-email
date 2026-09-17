@@ -42,7 +42,7 @@ func TestRenderHTML_containsMetadata(t *testing.T) {
 		PublicIPv6:    "2001:db8::1",
 		ISP:           "ExampleISP",
 	}
-	html, err := RenderHTML("body\nline", "c1", "host1", si, nil)
+	html, err := renderHTML("body\nline", nil, "", "c1", "host1", si, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,10 +53,37 @@ func TestRenderHTML_containsMetadata(t *testing.T) {
 	}
 }
 
+func TestRenderHTML_keepsRawHTMLAndFooter(t *testing.T) {
+	t.Parallel()
+	si := SysInfo{
+		UptimeHuman:   "2d",
+		LoadAverage:   "0.4 0.5 0.6",
+		MemoryHuman:   "2G",
+		DiskRootHuman: "20G free",
+		PublicIPv4:    "5.6.7.8",
+		PublicIPv6:    "2001:db8::2",
+		ISP:           "OtherISP",
+	}
+	raw := `<img src="cid:chart.png" alt="chart" width="600">`
+	html, err := renderHTML("body", nil, raw, "c2", "host2", si, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(html, raw) {
+		t.Fatalf("html dropped the raw block:\n%s", html)
+	}
+	// The metadata footer still has to survive beside the new block.
+	for _, want := range []string{"Caller", "c2", "host2", "Uptime", "2d", "OtherISP", "5.6.7.8"} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("html missing footer field %q", want)
+		}
+	}
+}
+
 func TestRenderHTML_escapesBody(t *testing.T) {
 	t.Parallel()
 	si := CollectSysInfo(context.Background())
-	html, err := RenderHTML("<script>x</script>", "c", "h", si, nil)
+	html, err := renderHTML("<script>x</script>", nil, "", "c", "h", si, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

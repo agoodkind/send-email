@@ -23,6 +23,7 @@ body { font: 14px -apple-system, BlinkMacSystemFont, Arial, sans-serif; margin: 
 </div>
 <div>{{range $i, $line := .BodyLines}}{{if $i}}<br>
 {{end}}{{$line}}{{end}}</div>
+{{if .HTMLBlock}}<div class="custom">{{.HTMLBlock}}</div>{{end}}
 {{range .Tables}}
 <table class="report">
   {{if .Caption}}<caption>{{.Caption}}</caption>{{end}}
