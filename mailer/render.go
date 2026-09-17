@@ -42,12 +42,17 @@ type htmlEmailData struct {
 	Local6    []ipRow
 }
 
-// renderHTML builds the HTML body with a metadata footer. rawHTML comes from
-// [Message.HTML] and reaches the template unescaped, so only a caller that
-// owns that string may set it.
+// RenderHTML builds the HTML body with a metadata footer.
 //
 // now defaults to [SystemClock] when nil; callers may inject a clock for
 // deterministic tests.
+func RenderHTML(msg, caller, hostname string, si SysInfo, now Clock) (string, error) {
+	return renderHTML(msg, nil, "", caller, hostname, si, now)
+}
+
+// renderHTML builds the HTML body with a metadata footer. rawHTML comes from
+// [Message.HTML] and reaches the template unescaped, so only a caller that
+// owns that string may set it.
 func renderHTML(
 	msg string,
 	tables []Table,

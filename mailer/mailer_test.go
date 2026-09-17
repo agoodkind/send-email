@@ -2,11 +2,44 @@ package mailer
 
 import (
 	"context"
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestValidInlines_dropsHeaderInjection(t *testing.T) {
+	t.Parallel()
+	kept := validInlines(context.Background(), []InlineImage{
+		{Filename: "chart.png", MIMEType: "image/png", Data: []byte{1}},
+		{Filename: "a\r\nContent-Type: text/html", MIMEType: "image/png", Data: []byte{2}},
+		{Filename: "ok.png", MIMEType: "image/png\r\nX-Evil: 1", Data: []byte{3}},
+		{Filename: "../escape.png", MIMEType: "image/png", Data: []byte{4}},
+	})
+	if len(kept) != 1 || kept[0].Filename != "chart.png" {
+		t.Fatalf("kept = %+v, want only chart.png", kept)
+	}
+}
+
+func TestBuildMIMEMessage_carriesInlineImage(t *testing.T) {
+	t.Parallel()
+	mime := string(buildMIMEMessage(
+		"Name", "from@example.com", "to@example.com", "subject",
+		"BOUND", "text", "<p>html</p>",
+		[]InlineImage{{Filename: "chart.png", MIMEType: "image/png", Data: []byte("binary")}},
+	))
+	for _, want := range []string{
+		`Content-Type: multipart/related; boundary="BOUND_rel"`,
+		"Content-ID: <chart.png>",
+		"Content-Transfer-Encoding: base64",
+		base64.StdEncoding.EncodeToString([]byte("binary")),
+	} {
+		if !strings.Contains(mime, want) {
+			t.Fatalf("mime missing %q:\n%s", want, mime)
+		}
+	}
+}
 
 func TestLoadAPIKeyFromEnvFiles(t *testing.T) {
 	t.Parallel()
