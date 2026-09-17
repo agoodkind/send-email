@@ -37,7 +37,7 @@ func buildMIMEMessage(
 	// HTML can reach them through cid: while a text-only reader still gets the
 	// plain part.
 	related := boundary + "_rel"
-	fmt.Fprintf(&b, "Content-Type: multipart/related; boundary=%q\r\n\r\n", related)
+	fmt.Fprintf(&b, "Content-Type: multipart/related; boundary=%q; type=%q\r\n\r\n", related, "multipart/alternative")
 	fmt.Fprintf(&b, "--%s\r\n", related)
 	fmt.Fprintf(&b, "Content-Type: multipart/alternative; boundary=%q\r\n\r\n", boundary)
 	writeAlternative(&b, boundary, textPart, htmlPart)

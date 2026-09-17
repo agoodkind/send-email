@@ -30,7 +30,7 @@ func TestBuildMIMEMessage_carriesInlineImage(t *testing.T) {
 		[]InlineImage{{Filename: "chart.png", MIMEType: "image/png", Data: []byte("binary")}},
 	))
 	for _, want := range []string{
-		`Content-Type: multipart/related; boundary="BOUND_rel"`,
+		`Content-Type: multipart/related; boundary="BOUND_rel"; type="multipart/alternative"`,
 		"Content-ID: <chart.png>",
 		"Content-Transfer-Encoding: base64",
 		base64.StdEncoding.EncodeToString([]byte("binary")),
