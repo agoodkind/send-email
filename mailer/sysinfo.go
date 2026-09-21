@@ -33,6 +33,13 @@ type SysInfo struct {
 
 type dialNetwork string
 
+type networkLookupURLs struct {
+	publicIP []string
+	isp      []string
+}
+
+type networkLookupURLsContextKey struct{}
+
 const (
 	dialNetworkV4 dialNetwork = "tcp4"
 	dialNetworkV6 dialNetwork = "tcp6"
@@ -154,6 +161,9 @@ func racePublicIP(ctx context.Context, network dialNetwork) string {
 		"https://api.ipify.org",
 		"https://ifconfig.me/ip",
 	}
+	if configured, ok := ctx.Value(networkLookupURLsContextKey{}).(networkLookupURLs); ok {
+		urls = configured.publicIP
+	}
 	return firstHTTPBody(ctx, network, urls, 5*time.Second)
 }
 
@@ -162,6 +172,9 @@ func raceISP(ctx context.Context, network dialNetwork) string {
 		"https://ifconfig.co/asn-org",
 		"https://ipinfo.io/org",
 		"http://ip-api.com/line/?fields=org",
+	}
+	if configured, ok := ctx.Value(networkLookupURLsContextKey{}).(networkLookupURLs); ok {
+		urls = configured.isp
 	}
 	return firstHTTPBody(ctx, network, urls, 5*time.Second)
 }
