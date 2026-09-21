@@ -25,6 +25,8 @@ type SysInfo struct {
 	PublicIPv4     string
 	PublicIPv6     string
 	ISP            string
+	ISPIPv4        string
+	ISPIPv6        string
 	LocalIPv4Lines []string
 	LocalIPv6Lines []string
 }
@@ -32,9 +34,8 @@ type SysInfo struct {
 type dialNetwork string
 
 const (
-	dialNetworkAny dialNetwork = "tcp"
-	dialNetworkV4  dialNetwork = "tcp4"
-	dialNetworkV6  dialNetwork = "tcp6"
+	dialNetworkV4 dialNetwork = "tcp4"
+	dialNetworkV6 dialNetwork = "tcp6"
 )
 
 // CollectSysInfo gathers system information.
@@ -47,21 +48,36 @@ func CollectSysInfo(ctx context.Context) SysInfo {
 		si.LoadAverage = "N/A"
 		si.MemoryHuman = "N/A"
 		si.DiskRootHuman = "N/A"
-		si.PublicIPv4 = racePublicIP(ctx, dialNetworkV4)
-		si.PublicIPv6 = racePublicIP(ctx, dialNetworkV6)
-		si.ISP = raceISP(ctx)
-		si.LocalIPv4Lines, si.LocalIPv6Lines = localAddrs()
-		return si
+	} else {
+		si.UptimeHuman = linuxUptimeString()
+		si.LoadAverage = linuxLoadAvg()
+		si.MemoryHuman = linuxMemHuman()
+		si.DiskRootHuman = linuxDiskRoot()
 	}
-	si.UptimeHuman = linuxUptimeString()
-	si.LoadAverage = linuxLoadAvg()
-	si.MemoryHuman = linuxMemHuman()
-	si.DiskRootHuman = linuxDiskRoot()
-	si.PublicIPv4 = racePublicIP(ctx, dialNetworkV4)
-	si.PublicIPv6 = racePublicIP(ctx, dialNetworkV6)
-	si.ISP = raceISP(ctx)
+	collectPublicNetworkInfo(ctx, &si)
 	si.LocalIPv4Lines, si.LocalIPv6Lines = localAddrs()
 	return si
+}
+
+func collectPublicNetworkInfo(ctx context.Context, si *SysInfo) {
+	var waitGroup sync.WaitGroup
+	waitGroup.Go(func() {
+		si.PublicIPv4 = racePublicIP(ctx, dialNetworkV4)
+	})
+	waitGroup.Go(func() {
+		si.PublicIPv6 = racePublicIP(ctx, dialNetworkV6)
+	})
+	waitGroup.Go(func() {
+		si.ISPIPv4 = raceISP(ctx, dialNetworkV4)
+	})
+	waitGroup.Go(func() {
+		si.ISPIPv6 = raceISP(ctx, dialNetworkV6)
+	})
+	waitGroup.Wait()
+	si.ISP = si.ISPIPv4
+	if si.ISP == "N/A" {
+		si.ISP = si.ISPIPv6
+	}
 }
 
 func linuxUptimeString() string {
@@ -141,13 +157,13 @@ func racePublicIP(ctx context.Context, network dialNetwork) string {
 	return firstHTTPBody(ctx, network, urls, 5*time.Second)
 }
 
-func raceISP(ctx context.Context) string {
+func raceISP(ctx context.Context, network dialNetwork) string {
 	urls := []string{
 		"https://ifconfig.co/asn-org",
 		"https://ipinfo.io/org",
 		"http://ip-api.com/line/?fields=org",
 	}
-	return firstHTTPBody(ctx, dialNetworkAny, urls, 5*time.Second)
+	return firstHTTPBody(ctx, network, urls, 5*time.Second)
 }
 
 func firstHTTPBody(ctx context.Context, network dialNetwork, urls []string, timeout time.Duration) string {
@@ -165,10 +181,8 @@ func firstHTTPBody(ctx context.Context, network dialNetwork, urls []string, time
 				return dialer.DialContext(ctx, string(dialNetworkV4), addr)
 			case dialNetworkV6:
 				return dialer.DialContext(ctx, string(dialNetworkV6), addr)
-			case dialNetworkAny:
-				return dialer.DialContext(ctx, string(dialNetworkAny), addr)
 			default:
-				return dialer.DialContext(ctx, string(dialNetworkAny), addr)
+				return dialer.DialContext(ctx, "tcp", addr)
 			}
 		},
 	}

@@ -42,7 +42,8 @@ body { font: 14px -apple-system, BlinkMacSystemFont, Arial, sans-serif; margin: 
   <tr><td class="k">Disk</td><td>{{.Disk}}</td></tr>
   <tr><td class="k">Public IPv4</td><td>{{.Pub4}}</td></tr>
   <tr><td class="k">Public IPv6</td><td>{{.Pub6}}</td></tr>
-  <tr><td class="k">ISP</td><td>{{.ISP}}</td></tr>
+  <tr><td class="k">IPv4 ISP</td><td>{{.ISP4}}</td></tr>
+  <tr><td class="k">IPv6 ISP</td><td>{{.ISP6}}</td></tr>
   {{range .Local4}}<tr><td class="k">{{.Iface}}</td><td>{{.IP}}</td></tr>{{end}}
   {{range .Local6}}<tr><td class="k">{{.Iface}}</td><td>{{.IP}}</td></tr>{{end}}
 </table>

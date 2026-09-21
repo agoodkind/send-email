@@ -37,7 +37,8 @@ type htmlEmailData struct {
 	Disk      string
 	Pub4      string
 	Pub6      string
-	ISP       string
+	ISP4      string
+	ISP6      string
 	Local4    []ipRow
 	Local6    []ipRow
 }
@@ -84,7 +85,8 @@ func renderHTML(
 		Disk:      si.DiskRootHuman,
 		Pub4:      si.PublicIPv4,
 		Pub6:      si.PublicIPv6,
-		ISP:       si.ISP,
+		ISP4:      displayISP(si.ISPIPv4, si.ISP),
+		ISP6:      displayISP(si.ISPIPv6, si.ISP),
 		Local4:    parseIPRows(si.LocalIPv4Lines),
 		Local6:    parseIPRows(si.LocalIPv6Lines),
 	}
@@ -101,6 +103,16 @@ func renderHTML(
 		return "", wrapped
 	}
 	return buf.String(), nil
+}
+
+func displayISP(familyISP, fallback string) string {
+	if familyISP != "" {
+		return familyISP
+	}
+	if fallback != "" {
+		return fallback
+	}
+	return "N/A"
 }
 
 func parseIPRows(lines []string) []ipRow {
