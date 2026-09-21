@@ -25,7 +25,7 @@ func TestCollectSysInfo_routesLookupsByIPFamily(t *testing.T) {
 		isp:      []string{baseURL + "/isp"},
 	}
 
-	si := collectSysInfo(context.Background(), lookupURLs)
+	si := CollectSysInfo(context.Background(), lookupURLs)
 
 	if si.PublicIPv4 != "192.0.2.4" {
 		t.Fatalf("PublicIPv4 = %q, want 192.0.2.4", si.PublicIPv4)
@@ -62,7 +62,7 @@ func TestCollectSysInfo_honorsCancellation(t *testing.T) {
 		isp:      []string{baseURL + "/isp"},
 	}
 
-	si := collectSysInfo(parent, lookupURLs)
+	si := CollectSysInfo(parent, lookupURLs)
 
 	if si.PublicIPv4 != "N/A" {
 		t.Fatalf("PublicIPv4 = %q, want N/A", si.PublicIPv4)

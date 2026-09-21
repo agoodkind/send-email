@@ -66,8 +66,12 @@ const (
 
 // CollectSysInfo gathers system information.
 // On non-Linux platforms, some fields read as "N/A".
-func CollectSysInfo(ctx context.Context) SysInfo {
-	return collectSysInfo(ctx, defaultNetworkLookupURLs())
+func CollectSysInfo(ctx context.Context, lookupURLOverrides ...networkLookupURLs) SysInfo {
+	lookupURLs := defaultNetworkLookupURLs()
+	if len(lookupURLOverrides) > 0 {
+		lookupURLs = lookupURLOverrides[0]
+	}
+	return collectSysInfo(ctx, lookupURLs)
 }
 
 func collectSysInfo(ctx context.Context, lookupURLs networkLookupURLs) SysInfo {
