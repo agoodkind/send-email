@@ -40,9 +40,30 @@ type networkLookupURLs struct {
 
 type networkLookupURLsContextKey struct{}
 
+type publicNetworkInfo struct {
+	publicIPv4 string
+	publicIPv6 string
+	ispIPv4    string
+	ispIPv6    string
+}
+
+type publicNetworkResult struct {
+	field publicNetworkField
+	value string
+}
+
+type publicNetworkField uint8
+
 const (
 	dialNetworkV4 dialNetwork = "tcp4"
 	dialNetworkV6 dialNetwork = "tcp6"
+)
+
+const (
+	publicNetworkFieldIPv4 publicNetworkField = iota
+	publicNetworkFieldIPv6
+	publicNetworkFieldISPIPv4
+	publicNetworkFieldISPIPv6
 )
 
 // CollectSysInfo gathers system information.
@@ -61,7 +82,11 @@ func CollectSysInfo(ctx context.Context) SysInfo {
 		si.MemoryHuman = linuxMemHuman()
 		si.DiskRootHuman = linuxDiskRoot()
 	}
-	collectPublicNetworkInfo(ctx, &si)
+	publicNetwork := collectPublicNetworkInfo(ctx)
+	si.PublicIPv4 = publicNetwork.publicIPv4
+	si.PublicIPv6 = publicNetwork.publicIPv6
+	si.ISPIPv4 = publicNetwork.ispIPv4
+	si.ISPIPv6 = publicNetwork.ispIPv6
 	si.ISP = si.ISPIPv4
 	if si.ISP == "N/A" {
 		si.ISP = si.ISPIPv6
@@ -70,21 +95,50 @@ func CollectSysInfo(ctx context.Context) SysInfo {
 	return si
 }
 
-func collectPublicNetworkInfo(ctx context.Context, si *SysInfo) {
+func collectPublicNetworkInfo(ctx context.Context) publicNetworkInfo {
 	var waitGroup sync.WaitGroup
+	results := make(chan publicNetworkResult, 4)
 	waitGroup.Go(func() {
-		si.PublicIPv4 = racePublicIP(ctx, dialNetworkV4)
+		results <- publicNetworkResult{
+			field: publicNetworkFieldIPv4,
+			value: racePublicIP(ctx, dialNetworkV4),
+		}
 	})
 	waitGroup.Go(func() {
-		si.PublicIPv6 = racePublicIP(ctx, dialNetworkV6)
+		results <- publicNetworkResult{
+			field: publicNetworkFieldIPv6,
+			value: racePublicIP(ctx, dialNetworkV6),
+		}
 	})
 	waitGroup.Go(func() {
-		si.ISPIPv4 = raceISP(ctx, dialNetworkV4)
+		results <- publicNetworkResult{
+			field: publicNetworkFieldISPIPv4,
+			value: raceISP(ctx, dialNetworkV4),
+		}
 	})
 	waitGroup.Go(func() {
-		si.ISPIPv6 = raceISP(ctx, dialNetworkV6)
+		results <- publicNetworkResult{
+			field: publicNetworkFieldISPIPv6,
+			value: raceISP(ctx, dialNetworkV6),
+		}
 	})
 	waitGroup.Wait()
+
+	var info publicNetworkInfo
+	for range 4 {
+		result := <-results
+		switch result.field {
+		case publicNetworkFieldIPv4:
+			info.publicIPv4 = result.value
+		case publicNetworkFieldIPv6:
+			info.publicIPv6 = result.value
+		case publicNetworkFieldISPIPv4:
+			info.ispIPv4 = result.value
+		case publicNetworkFieldISPIPv6:
+			info.ispIPv6 = result.value
+		}
+	}
+	return info
 }
 
 func linuxUptimeString() string {
