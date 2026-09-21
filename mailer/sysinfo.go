@@ -25,21 +25,56 @@ type SysInfo struct {
 	PublicIPv4     string
 	PublicIPv6     string
 	ISP            string
+	ISPIPv4        string
+	ISPIPv6        string
 	LocalIPv4Lines []string
 	LocalIPv6Lines []string
 }
 
 type dialNetwork string
 
+type networkLookupURLs struct {
+	publicIP []string
+	isp      []string
+}
+
+type publicNetworkInfo struct {
+	publicIPv4 string
+	publicIPv6 string
+	ispIPv4    string
+	ispIPv6    string
+}
+
+type publicNetworkResult struct {
+	field publicNetworkField
+	value string
+}
+
+type publicNetworkField uint8
+
 const (
-	dialNetworkAny dialNetwork = "tcp"
-	dialNetworkV4  dialNetwork = "tcp4"
-	dialNetworkV6  dialNetwork = "tcp6"
+	dialNetworkV4 dialNetwork = "tcp4"
+	dialNetworkV6 dialNetwork = "tcp6"
+)
+
+const (
+	publicNetworkFieldIPv4 publicNetworkField = iota
+	publicNetworkFieldIPv6
+	publicNetworkFieldISPIPv4
+	publicNetworkFieldISPIPv6
 )
 
 // CollectSysInfo gathers system information.
 // On non-Linux platforms, some fields read as "N/A".
-func CollectSysInfo(ctx context.Context) SysInfo {
+func CollectSysInfo(ctx context.Context, lookupURLOverrides ...networkLookupURLs) SysInfo {
+	lookupURLs := defaultNetworkLookupURLs()
+	if len(lookupURLOverrides) > 0 {
+		lookupURLs = lookupURLOverrides[0]
+	}
+	return collectSysInfo(ctx, lookupURLs)
+}
+
+func collectSysInfo(ctx context.Context, lookupURLs networkLookupURLs) SysInfo {
 	h, _ := os.Hostname()
 	si := SysInfo{Hostname: h}
 	if runtime.GOOS != "linux" {
@@ -47,21 +82,72 @@ func CollectSysInfo(ctx context.Context) SysInfo {
 		si.LoadAverage = "N/A"
 		si.MemoryHuman = "N/A"
 		si.DiskRootHuman = "N/A"
-		si.PublicIPv4 = racePublicIP(ctx, dialNetworkV4)
-		si.PublicIPv6 = racePublicIP(ctx, dialNetworkV6)
-		si.ISP = raceISP(ctx)
-		si.LocalIPv4Lines, si.LocalIPv6Lines = localAddrs()
-		return si
+	} else {
+		si.UptimeHuman = linuxUptimeString()
+		si.LoadAverage = linuxLoadAvg()
+		si.MemoryHuman = linuxMemHuman()
+		si.DiskRootHuman = linuxDiskRoot()
 	}
-	si.UptimeHuman = linuxUptimeString()
-	si.LoadAverage = linuxLoadAvg()
-	si.MemoryHuman = linuxMemHuman()
-	si.DiskRootHuman = linuxDiskRoot()
-	si.PublicIPv4 = racePublicIP(ctx, dialNetworkV4)
-	si.PublicIPv6 = racePublicIP(ctx, dialNetworkV6)
-	si.ISP = raceISP(ctx)
+	publicNetwork := collectPublicNetworkInfo(ctx, lookupURLs)
+	si.PublicIPv4 = publicNetwork.publicIPv4
+	si.PublicIPv6 = publicNetwork.publicIPv6
+	si.ISPIPv4 = publicNetwork.ispIPv4
+	si.ISPIPv6 = publicNetwork.ispIPv6
+	si.ISP = si.ISPIPv4
+	if si.ISP == "N/A" {
+		si.ISP = si.ISPIPv6
+	}
 	si.LocalIPv4Lines, si.LocalIPv6Lines = localAddrs()
 	return si
+}
+
+func collectPublicNetworkInfo(
+	ctx context.Context,
+	lookupURLs networkLookupURLs,
+) publicNetworkInfo {
+	var waitGroup sync.WaitGroup
+	results := make(chan publicNetworkResult, 4)
+	waitGroup.Go(func() {
+		results <- publicNetworkResult{
+			field: publicNetworkFieldIPv4,
+			value: firstHTTPBody(ctx, dialNetworkV4, lookupURLs.publicIP),
+		}
+	})
+	waitGroup.Go(func() {
+		results <- publicNetworkResult{
+			field: publicNetworkFieldIPv6,
+			value: firstHTTPBody(ctx, dialNetworkV6, lookupURLs.publicIP),
+		}
+	})
+	waitGroup.Go(func() {
+		results <- publicNetworkResult{
+			field: publicNetworkFieldISPIPv4,
+			value: firstHTTPBody(ctx, dialNetworkV4, lookupURLs.isp),
+		}
+	})
+	waitGroup.Go(func() {
+		results <- publicNetworkResult{
+			field: publicNetworkFieldISPIPv6,
+			value: firstHTTPBody(ctx, dialNetworkV6, lookupURLs.isp),
+		}
+	})
+	waitGroup.Wait()
+
+	var info publicNetworkInfo
+	for range 4 {
+		result := <-results
+		switch result.field {
+		case publicNetworkFieldIPv4:
+			info.publicIPv4 = result.value
+		case publicNetworkFieldIPv6:
+			info.publicIPv6 = result.value
+		case publicNetworkFieldISPIPv4:
+			info.ispIPv4 = result.value
+		case publicNetworkFieldISPIPv6:
+			info.ispIPv6 = result.value
+		}
+	}
+	return info
 }
 
 func linuxUptimeString() string {
@@ -131,26 +217,25 @@ func linuxMemHuman() string {
 		float64(totalKB)/1024/1024)
 }
 
-func racePublicIP(ctx context.Context, network dialNetwork) string {
+func defaultNetworkLookupURLs() networkLookupURLs {
 	urls := []string{
 		"https://ifconfig.co/ip",
 		"https://icanhazip.com",
 		"https://api.ipify.org",
 		"https://ifconfig.me/ip",
 	}
-	return firstHTTPBody(ctx, network, urls, 5*time.Second)
-}
-
-func raceISP(ctx context.Context) string {
-	urls := []string{
-		"https://ifconfig.co/asn-org",
-		"https://ipinfo.io/org",
-		"http://ip-api.com/line/?fields=org",
+	return networkLookupURLs{
+		publicIP: urls,
+		isp: []string{
+			"https://ifconfig.co/asn-org",
+			"https://ipinfo.io/org",
+			"http://ip-api.com/line/?fields=org",
+		},
 	}
-	return firstHTTPBody(ctx, dialNetworkAny, urls, 5*time.Second)
 }
 
-func firstHTTPBody(ctx context.Context, network dialNetwork, urls []string, timeout time.Duration) string {
+func firstHTTPBody(ctx context.Context, network dialNetwork, urls []string) string {
+	timeout := 5 * time.Second
 	parent, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	var wg sync.WaitGroup
@@ -165,10 +250,8 @@ func firstHTTPBody(ctx context.Context, network dialNetwork, urls []string, time
 				return dialer.DialContext(ctx, string(dialNetworkV4), addr)
 			case dialNetworkV6:
 				return dialer.DialContext(ctx, string(dialNetworkV6), addr)
-			case dialNetworkAny:
-				return dialer.DialContext(ctx, string(dialNetworkAny), addr)
 			default:
-				return dialer.DialContext(ctx, string(dialNetworkAny), addr)
+				return dialer.DialContext(ctx, "tcp", addr)
 			}
 		},
 	}
