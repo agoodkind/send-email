@@ -110,25 +110,25 @@ func collectPublicNetworkInfo(
 	waitGroup.Go(func() {
 		results <- publicNetworkResult{
 			field: publicNetworkFieldIPv4,
-			value: racePublicIP(ctx, dialNetworkV4, lookupURLs.publicIP),
+			value: firstHTTPBody(ctx, dialNetworkV4, lookupURLs.publicIP),
 		}
 	})
 	waitGroup.Go(func() {
 		results <- publicNetworkResult{
 			field: publicNetworkFieldIPv6,
-			value: racePublicIP(ctx, dialNetworkV6, lookupURLs.publicIP),
+			value: firstHTTPBody(ctx, dialNetworkV6, lookupURLs.publicIP),
 		}
 	})
 	waitGroup.Go(func() {
 		results <- publicNetworkResult{
 			field: publicNetworkFieldISPIPv4,
-			value: raceISP(ctx, dialNetworkV4, lookupURLs.isp),
+			value: firstHTTPBody(ctx, dialNetworkV4, lookupURLs.isp),
 		}
 	})
 	waitGroup.Go(func() {
 		results <- publicNetworkResult{
 			field: publicNetworkFieldISPIPv6,
-			value: raceISP(ctx, dialNetworkV6, lookupURLs.isp),
+			value: firstHTTPBody(ctx, dialNetworkV6, lookupURLs.isp),
 		}
 	})
 	waitGroup.Wait()
@@ -217,41 +217,25 @@ func linuxMemHuman() string {
 		float64(totalKB)/1024/1024)
 }
 
-func publicIPLookupURLs() []string {
+func defaultNetworkLookupURLs() networkLookupURLs {
 	urls := []string{
 		"https://ifconfig.co/ip",
 		"https://icanhazip.com",
 		"https://api.ipify.org",
 		"https://ifconfig.me/ip",
 	}
-	return urls
-}
-
-func ispLookupURLs() []string {
-	urls := []string{
-		"https://ifconfig.co/asn-org",
-		"https://ipinfo.io/org",
-		"http://ip-api.com/line/?fields=org",
-	}
-	return urls
-}
-
-func defaultNetworkLookupURLs() networkLookupURLs {
 	return networkLookupURLs{
-		publicIP: publicIPLookupURLs(),
-		isp:      ispLookupURLs(),
+		publicIP: urls,
+		isp: []string{
+			"https://ifconfig.co/asn-org",
+			"https://ipinfo.io/org",
+			"http://ip-api.com/line/?fields=org",
+		},
 	}
 }
 
-func racePublicIP(ctx context.Context, network dialNetwork, urls []string) string {
-	return firstHTTPBody(ctx, network, urls, 5*time.Second)
-}
-
-func raceISP(ctx context.Context, network dialNetwork, urls []string) string {
-	return firstHTTPBody(ctx, network, urls, 5*time.Second)
-}
-
-func firstHTTPBody(ctx context.Context, network dialNetwork, urls []string, timeout time.Duration) string {
+func firstHTTPBody(ctx context.Context, network dialNetwork, urls []string) string {
+	timeout := 5 * time.Second
 	parent, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	var wg sync.WaitGroup
