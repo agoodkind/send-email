@@ -102,6 +102,24 @@ func TestRenderHTML_keepsRawHTMLAndFooter(t *testing.T) {
 	}
 }
 
+func TestRenderHTML_usesLegacyISPForBothFamilies(t *testing.T) {
+	t.Parallel()
+	si := SysInfo{ISP: "Legacy ISP"}
+
+	html, err := RenderHTML("body", "caller", "host", si, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`<tr><td class="k">IPv4 ISP</td><td>Legacy ISP</td></tr>`,
+		`<tr><td class="k">IPv6 ISP</td><td>Legacy ISP</td></tr>`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("rendered email missing %q", want)
+		}
+	}
+}
+
 func TestRenderHTML_escapesBody(t *testing.T) {
 	t.Parallel()
 	si := CollectSysInfo(context.Background())

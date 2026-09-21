@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -38,8 +39,17 @@ func TestCollectSysInfo_routesLookupsByIPFamily(t *testing.T) {
 	if si.ISPIPv6 != "IPv6 ISP" {
 		t.Fatalf("ISPIPv6 = %q, want IPv6 ISP", si.ISPIPv6)
 	}
-	if si.ISP != "IPv4 ISP" {
-		t.Fatalf("legacy ISP = %q, want IPv4 ISP", si.ISP)
+	html, err := RenderHTML("body", "test", "host", si, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`<tr><td class="k">IPv4 ISP</td><td>IPv4 ISP</td></tr>`,
+		`<tr><td class="k">IPv6 ISP</td><td>IPv6 ISP</td></tr>`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("rendered email missing %q", want)
+		}
 	}
 }
 

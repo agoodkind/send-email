@@ -69,6 +69,12 @@ func renderHTML(
 	plainBody := RenderPlain(msg)
 	oneLine := strings.ReplaceAll(strings.TrimSpace(plainBody), "\n", " ")
 	bodyLines := strings.Split(plainBody, "\n")
+	ispIPv4 := si.ISPIPv4
+	ispIPv6 := si.ISPIPv6
+	if ispIPv4 == "" && ispIPv6 == "" && si.ISP != "" {
+		ispIPv4 = si.ISP
+		ispIPv6 = si.ISP
+	}
 	data := htmlEmailData{
 		Preheader: oneLine,
 		BodyLines: bodyLines,
@@ -85,8 +91,8 @@ func renderHTML(
 		Disk:      si.DiskRootHuman,
 		Pub4:      si.PublicIPv4,
 		Pub6:      si.PublicIPv6,
-		ISP4:      displayISP(si.ISPIPv4, si.ISP),
-		ISP6:      displayISP(si.ISPIPv6, si.ISP),
+		ISP4:      displayISP(ispIPv4),
+		ISP6:      displayISP(ispIPv6),
 		Local4:    parseIPRows(si.LocalIPv4Lines),
 		Local6:    parseIPRows(si.LocalIPv6Lines),
 	}
@@ -105,12 +111,9 @@ func renderHTML(
 	return buf.String(), nil
 }
 
-func displayISP(familyISP, fallback string) string {
+func displayISP(familyISP string) string {
 	if familyISP != "" {
 		return familyISP
-	}
-	if fallback != "" {
-		return fallback
 	}
 	return "N/A"
 }

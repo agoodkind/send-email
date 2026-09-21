@@ -62,6 +62,10 @@ func CollectSysInfo(ctx context.Context) SysInfo {
 		si.DiskRootHuman = linuxDiskRoot()
 	}
 	collectPublicNetworkInfo(ctx, &si)
+	si.ISP = si.ISPIPv4
+	if si.ISP == "N/A" {
+		si.ISP = si.ISPIPv6
+	}
 	si.LocalIPv4Lines, si.LocalIPv6Lines = localAddrs()
 	return si
 }
@@ -81,10 +85,6 @@ func collectPublicNetworkInfo(ctx context.Context, si *SysInfo) {
 		si.ISPIPv6 = raceISP(ctx, dialNetworkV6)
 	})
 	waitGroup.Wait()
-	si.ISP = si.ISPIPv4
-	if si.ISP == "N/A" {
-		si.ISP = si.ISPIPv6
-	}
 }
 
 func linuxUptimeString() string {
