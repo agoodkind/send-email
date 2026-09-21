@@ -38,8 +38,6 @@ type networkLookupURLs struct {
 	isp      []string
 }
 
-type networkLookupURLsContextKey struct{}
-
 type publicNetworkInfo struct {
 	publicIPv4 string
 	publicIPv6 string
@@ -69,6 +67,10 @@ const (
 // CollectSysInfo gathers system information.
 // On non-Linux platforms, some fields read as "N/A".
 func CollectSysInfo(ctx context.Context) SysInfo {
+	return collectSysInfo(ctx, defaultNetworkLookupURLs())
+}
+
+func collectSysInfo(ctx context.Context, lookupURLs networkLookupURLs) SysInfo {
 	h, _ := os.Hostname()
 	si := SysInfo{Hostname: h}
 	if runtime.GOOS != "linux" {
@@ -82,7 +84,7 @@ func CollectSysInfo(ctx context.Context) SysInfo {
 		si.MemoryHuman = linuxMemHuman()
 		si.DiskRootHuman = linuxDiskRoot()
 	}
-	publicNetwork := collectPublicNetworkInfo(ctx)
+	publicNetwork := collectPublicNetworkInfo(ctx, lookupURLs)
 	si.PublicIPv4 = publicNetwork.publicIPv4
 	si.PublicIPv6 = publicNetwork.publicIPv6
 	si.ISPIPv4 = publicNetwork.ispIPv4
@@ -95,31 +97,34 @@ func CollectSysInfo(ctx context.Context) SysInfo {
 	return si
 }
 
-func collectPublicNetworkInfo(ctx context.Context) publicNetworkInfo {
+func collectPublicNetworkInfo(
+	ctx context.Context,
+	lookupURLs networkLookupURLs,
+) publicNetworkInfo {
 	var waitGroup sync.WaitGroup
 	results := make(chan publicNetworkResult, 4)
 	waitGroup.Go(func() {
 		results <- publicNetworkResult{
 			field: publicNetworkFieldIPv4,
-			value: racePublicIP(ctx, dialNetworkV4),
+			value: racePublicIP(ctx, dialNetworkV4, lookupURLs.publicIP),
 		}
 	})
 	waitGroup.Go(func() {
 		results <- publicNetworkResult{
 			field: publicNetworkFieldIPv6,
-			value: racePublicIP(ctx, dialNetworkV6),
+			value: racePublicIP(ctx, dialNetworkV6, lookupURLs.publicIP),
 		}
 	})
 	waitGroup.Go(func() {
 		results <- publicNetworkResult{
 			field: publicNetworkFieldISPIPv4,
-			value: raceISP(ctx, dialNetworkV4),
+			value: raceISP(ctx, dialNetworkV4, lookupURLs.isp),
 		}
 	})
 	waitGroup.Go(func() {
 		results <- publicNetworkResult{
 			field: publicNetworkFieldISPIPv6,
-			value: raceISP(ctx, dialNetworkV6),
+			value: raceISP(ctx, dialNetworkV6, lookupURLs.isp),
 		}
 	})
 	waitGroup.Wait()
@@ -208,28 +213,37 @@ func linuxMemHuman() string {
 		float64(totalKB)/1024/1024)
 }
 
-func racePublicIP(ctx context.Context, network dialNetwork) string {
+func publicIPLookupURLs() []string {
 	urls := []string{
 		"https://ifconfig.co/ip",
 		"https://icanhazip.com",
 		"https://api.ipify.org",
 		"https://ifconfig.me/ip",
 	}
-	if configured, ok := ctx.Value(networkLookupURLsContextKey{}).(networkLookupURLs); ok {
-		urls = configured.publicIP
-	}
-	return firstHTTPBody(ctx, network, urls, 5*time.Second)
+	return urls
 }
 
-func raceISP(ctx context.Context, network dialNetwork) string {
+func ispLookupURLs() []string {
 	urls := []string{
 		"https://ifconfig.co/asn-org",
 		"https://ipinfo.io/org",
 		"http://ip-api.com/line/?fields=org",
 	}
-	if configured, ok := ctx.Value(networkLookupURLsContextKey{}).(networkLookupURLs); ok {
-		urls = configured.isp
+	return urls
+}
+
+func defaultNetworkLookupURLs() networkLookupURLs {
+	return networkLookupURLs{
+		publicIP: publicIPLookupURLs(),
+		isp:      ispLookupURLs(),
 	}
+}
+
+func racePublicIP(ctx context.Context, network dialNetwork, urls []string) string {
+	return firstHTTPBody(ctx, network, urls, 5*time.Second)
+}
+
+func raceISP(ctx context.Context, network dialNetwork, urls []string) string {
 	return firstHTTPBody(ctx, network, urls, 5*time.Second)
 }
 

@@ -20,12 +20,12 @@ func TestCollectSysInfo_nonEmptyHostname(t *testing.T) {
 
 func TestCollectSysInfo_routesLookupsByIPFamily(t *testing.T) {
 	baseURL := newDualStackHTTPServers(t)
-	ctx := context.WithValue(context.Background(), networkLookupURLsContextKey{}, networkLookupURLs{
+	lookupURLs := networkLookupURLs{
 		publicIP: []string{baseURL + "/ip"},
 		isp:      []string{baseURL + "/isp"},
-	})
+	}
 
-	si := CollectSysInfo(ctx)
+	si := collectSysInfo(context.Background(), lookupURLs)
 
 	if si.PublicIPv4 != "192.0.2.4" {
 		t.Fatalf("PublicIPv4 = %q, want 192.0.2.4", si.PublicIPv4)
@@ -57,12 +57,12 @@ func TestCollectSysInfo_honorsCancellation(t *testing.T) {
 	baseURL := newDualStackHTTPServers(t)
 	parent, cancel := context.WithCancel(context.Background())
 	cancel()
-	ctx := context.WithValue(parent, networkLookupURLsContextKey{}, networkLookupURLs{
+	lookupURLs := networkLookupURLs{
 		publicIP: []string{baseURL + "/ip"},
 		isp:      []string{baseURL + "/isp"},
-	})
+	}
 
-	si := CollectSysInfo(ctx)
+	si := collectSysInfo(parent, lookupURLs)
 
 	if si.PublicIPv4 != "N/A" {
 		t.Fatalf("PublicIPv4 = %q, want N/A", si.PublicIPv4)
