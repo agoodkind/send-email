@@ -89,17 +89,17 @@ func TestSend_HTTPIncludesAttachment(t *testing.T) {
 		t.Fatal(received.Err)
 	}
 	if received.Path != "/v3/email/send" || received.Method != http.MethodPost || received.ContentType != "application/json" {
-		t.Fatalf("request = %s %s %s", received.Method, received.Path, received.ContentType)
+		t.Fatalf("The request was %s %s %s", received.Method, received.Path, received.ContentType)
 	}
 	if len(received.Payload.Attachments) != 1 {
-		t.Fatalf("attachments = %+v", received.Payload.Attachments)
+		t.Fatalf("The request included attachments %+v", received.Payload.Attachments)
 	}
 	attachment := received.Payload.Attachments[0]
 	if attachment.Filename != "trace.txt" || attachment.MIMEType != "text/plain" || attachment.FileBlob != base64.StdEncoding.EncodeToString([]byte("packet loss\n")) {
-		t.Fatalf("attachment = %+v", attachment)
+		t.Fatalf("The attachment was %+v", attachment)
 	}
 	if len(received.Payload.Inlines) != 1 || received.Payload.Inlines[0].Filename != "chart.png" {
-		t.Fatalf("inlines = %+v", received.Payload.Inlines)
+		t.Fatalf("The request included inline images %+v", received.Payload.Inlines)
 	}
 }
 
@@ -117,7 +117,7 @@ func TestSendRejectsInvalidAttachmentMetadata(t *testing.T) {
 			message := Message{To: "recipient@example.com", Subject: "diagnostics", Body: "See attachment", Attachments: []Attachment{test.attachment}}
 			err := mailer.Send(context.Background(), message)
 			if err == nil || !strings.Contains(err.Error(), test.want) || strings.Contains(err.Error(), "inline") {
-				t.Fatalf("send error = %v, want %q without inline wording", err, test.want)
+				t.Fatalf("The send error was %v; it should contain %q without inline wording", err, test.want)
 			}
 		})
 	}
