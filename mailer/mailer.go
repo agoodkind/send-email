@@ -297,8 +297,10 @@ func AtoiDefault(s string, def int) int {
 // errInlineFilename and errInlineMIMEType name why an inline image was left
 // out, so the log line carries a cause rather than only the offending value.
 var (
-	errInlineFilename = errors.New("inline filename must be letters, digits, dot, dash, or underscore")
-	errInlineMIMEType = errors.New("inline mimetype must be one type/subtype pair")
+	errInlineFilename     = errors.New("inline filename must be letters, digits, dot, dash, or underscore")
+	errInlineMIMEType     = errors.New("inline mimetype must be one type/subtype pair")
+	errAttachmentFilename = errors.New("attachment filename must be letters, digits, dot, dash, or underscore")
+	errAttachmentMIMEType = errors.New("attachment mimetype must be one type/subtype pair")
 )
 
 // inlineFilename matches the names a Content-ID and a cid: reference can carry
@@ -331,12 +333,12 @@ func validInlines(ctx context.Context, images []InlineImage) []InlineImage {
 func validateAttachments(ctx context.Context, attachments []Attachment) error {
 	for _, attachment := range attachments {
 		if !inlineFilename.MatchString(attachment.Filename) {
-			err := fmt.Errorf("attachment filename %q: %w", attachment.Filename, errInlineFilename)
+			err := fmt.Errorf("attachment filename %q: %w", attachment.Filename, errAttachmentFilename)
 			slog.ErrorContext(ctx, "send-email attachment rejected", "err", err)
 			return err
 		}
 		if !inlineMIMEType.MatchString(attachment.MIMEType) {
-			err := fmt.Errorf("attachment %q mimetype %q: %w", attachment.Filename, attachment.MIMEType, errInlineMIMEType)
+			err := fmt.Errorf("attachment %q mimetype %q: %w", attachment.Filename, attachment.MIMEType, errAttachmentMIMEType)
 			slog.ErrorContext(ctx, "send-email attachment rejected", "err", err)
 			return err
 		}

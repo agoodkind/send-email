@@ -103,6 +103,26 @@ func TestSend_HTTPIncludesAttachment(t *testing.T) {
 	}
 }
 
+func TestSendRejectsInvalidAttachmentMetadata(t *testing.T) {
+	mailer := New(Config{Transport: MethodHTTP, SMTP2GOAPIKey: "test"})
+	for _, test := range []struct {
+		name       string
+		attachment Attachment
+		want       string
+	}{
+		{name: "filename", attachment: Attachment{Filename: "trace\n.txt", MIMEType: "text/plain", Data: nil}, want: "attachment filename"},
+		{name: "media type", attachment: Attachment{Filename: "trace.txt", MIMEType: "text/plain; bad", Data: nil}, want: "attachment mimetype"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			message := Message{To: "recipient@example.com", Subject: "diagnostics", Body: "See attachment", Attachments: []Attachment{test.attachment}}
+			err := mailer.Send(context.Background(), message)
+			if err == nil || !strings.Contains(err.Error(), test.want) || strings.Contains(err.Error(), "inline") {
+				t.Fatalf("send error = %v, want %q without inline wording", err, test.want)
+			}
+		})
+	}
+}
+
 func TestLoadAPIKeyFromEnvFiles(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
