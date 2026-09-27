@@ -45,11 +45,11 @@ type smtp2goPayload struct {
 	TextBody      string          `json:"text_body"`
 	HTMLBody      string          `json:"html_body,omitempty"`
 	Inlines       []smtp2goFile   `json:"inlines,omitempty"`
+	Attachments   []smtp2goFile   `json:"attachments,omitempty"`
 	CustomHeaders []smtp2goHeader `json:"custom_headers,omitempty"`
 }
 
-// smtp2goFile is one inline image. SMTP2GO takes the bytes base64 encoded and
-// serves them to the HTML part as cid:Filename.
+// smtp2goFile is an inline image or downloadable attachment with base64 data.
 type smtp2goFile struct {
 	Filename string `json:"filename"`
 	FileBlob string `json:"fileblob"`
@@ -63,6 +63,18 @@ func smtp2goInlines(images []InlineImage) []smtp2goFile {
 			Filename: image.Filename,
 			FileBlob: base64.StdEncoding.EncodeToString(image.Data),
 			MIMEType: image.MIMEType,
+		})
+	}
+	return files
+}
+
+func smtp2goAttachments(attachments []Attachment) []smtp2goFile {
+	files := make([]smtp2goFile, 0, len(attachments))
+	for _, attachment := range attachments {
+		files = append(files, smtp2goFile{
+			Filename: attachment.Filename,
+			FileBlob: base64.StdEncoding.EncodeToString(attachment.Data),
+			MIMEType: attachment.MIMEType,
 		})
 	}
 	return files
@@ -84,8 +96,9 @@ type smtp2goResponseData struct {
 
 func sendSMTP2GOHTTP(
 	ctx context.Context,
-	apiKey, from, to, subject, textBody, htmlBody, senderName string,
+	endpoint, apiKey, from, to, subject, textBody, htmlBody, senderName string,
 	inlines []InlineImage,
+	attachments []Attachment,
 	bindIface string,
 ) error {
 	payload := smtp2goPayload{
@@ -96,6 +109,7 @@ func sendSMTP2GOHTTP(
 		TextBody:      textBody,
 		HTMLBody:      htmlBody,
 		Inlines:       smtp2goInlines(inlines),
+		Attachments:   smtp2goAttachments(attachments),
 		CustomHeaders: nil,
 	}
 	if senderName != "" {
@@ -111,7 +125,7 @@ func sendSMTP2GOHTTP(
 	cctx, cancel := context.WithTimeout(ctx, smtp2goTimeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(
-		cctx, http.MethodPost, smtp2goSendURL, bytes.NewReader(raw),
+		cctx, http.MethodPost, endpoint, bytes.NewReader(raw),
 	)
 	if err != nil {
 		slog.ErrorContext(ctx, "smtp2go request build failed", "err", err)

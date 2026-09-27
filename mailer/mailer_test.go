@@ -3,6 +3,9 @@ package mailer
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,16 +31,75 @@ func TestBuildMIMEMessage_carriesInlineImage(t *testing.T) {
 		"Name", "from@example.com", "to@example.com", "subject",
 		"BOUND", "text", "<p>html</p>",
 		[]InlineImage{{Filename: "chart.png", MIMEType: "image/png", Data: []byte("binary")}},
+		[]Attachment{{Filename: "trace.txt", MIMEType: "text/plain", Data: []byte("diagnostics")}},
 	))
 	for _, want := range []string{
+		`Content-Type: multipart/mixed; boundary="BOUND_mixed"`,
 		`Content-Type: multipart/related; boundary="BOUND_rel"; type="multipart/alternative"`,
 		"Content-ID: <chart.png>",
+		`Content-Disposition: attachment; filename="trace.txt"`,
 		"Content-Transfer-Encoding: base64",
 		base64.StdEncoding.EncodeToString([]byte("binary")),
+		base64.StdEncoding.EncodeToString([]byte("diagnostics")),
 	} {
 		if !strings.Contains(mime, want) {
 			t.Fatalf("mime missing %q:\n%s", want, mime)
 		}
+	}
+}
+
+func TestSend_HTTPIncludesAttachment(t *testing.T) {
+	type requestPayload struct {
+		Inlines     []smtp2goFile `json:"inlines"`
+		Attachments []smtp2goFile `json:"attachments"`
+	}
+	requests := make(chan struct {
+		Path        string
+		Method      string
+		ContentType string
+		Payload     requestPayload
+		Err         error
+	}, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		var payload requestPayload
+		err := json.NewDecoder(request.Body).Decode(&payload)
+		requests <- struct {
+			Path        string
+			Method      string
+			ContentType string
+			Payload     requestPayload
+			Err         error
+		}{request.URL.Path, request.Method, request.Header.Get("Content-Type"), payload, err}
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"data":{"succeeded":1}}`))
+	}))
+	defer server.Close()
+
+	message := Message{
+		To: "recipient@example.com", Subject: "diagnostics", Body: "See attachment",
+		Inlines:     []InlineImage{{Filename: "chart.png", MIMEType: "image/png", Data: []byte{1, 2}}},
+		Attachments: []Attachment{{Filename: "trace.txt", MIMEType: "text/plain", Data: []byte("packet loss\n")}},
+	}
+	mailer := New(Config{Transport: MethodHTTP, SMTP2GOAPIKey: "test", SMTP2GOEndpoint: server.URL + "/v3/email/send"})
+	if err := mailer.Send(context.Background(), message); err != nil {
+		t.Fatal(err)
+	}
+	received := <-requests
+	if received.Err != nil {
+		t.Fatal(received.Err)
+	}
+	if received.Path != "/v3/email/send" || received.Method != http.MethodPost || received.ContentType != "application/json" {
+		t.Fatalf("request = %s %s %s", received.Method, received.Path, received.ContentType)
+	}
+	if len(received.Payload.Attachments) != 1 {
+		t.Fatalf("attachments = %+v", received.Payload.Attachments)
+	}
+	attachment := received.Payload.Attachments[0]
+	if attachment.Filename != "trace.txt" || attachment.MIMEType != "text/plain" || attachment.FileBlob != base64.StdEncoding.EncodeToString([]byte("packet loss\n")) {
+		t.Fatalf("attachment = %+v", attachment)
+	}
+	if len(received.Payload.Inlines) != 1 || received.Payload.Inlines[0].Filename != "chart.png" {
+		t.Fatalf("inlines = %+v", received.Payload.Inlines)
 	}
 }
 

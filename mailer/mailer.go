@@ -31,7 +31,9 @@ const (
 // Config configures Mailer construction.
 type Config struct {
 	SMTP2GOAPIKey string
-	MsmtprcPath   string
+	// SMTP2GOEndpoint overrides the HTTP API endpoint. Empty uses SMTP2GO's default.
+	SMTP2GOEndpoint string
+	MsmtprcPath     string
 	// DefaultFromDomain used when [Message.From] is empty
 	// (e.g. hostname-mailer@goodkind.io).
 	DefaultFromDomain string
@@ -58,6 +60,13 @@ type InlineImage struct {
 	Data     []byte
 }
 
+// Attachment is a downloadable file included in an outbound message.
+type Attachment struct {
+	Filename string
+	MIMEType string
+	Data     []byte
+}
+
 // Message is one outbound email.
 type Message struct {
 	To      string
@@ -74,6 +83,8 @@ type Message struct {
 	HTML string
 	// Inlines are images referenced from HTML as cid:Filename.
 	Inlines []InlineImage
+	// Attachments are downloadable files, separate from inline images.
+	Attachments []Attachment
 }
 
 // Mailer sends email via SMTP2GO HTTP or msmtp-compatible SMTP.
@@ -120,6 +131,9 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 	}
 
 	msg.Inlines = validInlines(ctx, msg.Inlines)
+	if err := validateAttachments(ctx, msg.Attachments); err != nil {
+		return err
+	}
 	method := m.resolveMethod()
 	slog.InfoContext(ctx, "send-email dispatch",
 		"transport", string(method),
@@ -191,7 +205,11 @@ func (m *Mailer) sendHTTP(
 		return err
 	}
 	bind := m.cfg.BindInterface
-	return sendSMTP2GOHTTP(ctx, key, from, msg.To, msg.Subject, textBody, htmlBody, name, msg.Inlines, bind)
+	endpoint := m.cfg.SMTP2GOEndpoint
+	if endpoint == "" {
+		endpoint = smtp2goSendURL
+	}
+	return sendSMTP2GOHTTP(ctx, endpoint, key, from, msg.To, msg.Subject, textBody, htmlBody, name, msg.Inlines, msg.Attachments, bind)
 }
 
 func (m *Mailer) sendSMTP(
@@ -210,7 +228,7 @@ func (m *Mailer) sendSMTP(
 		return fmt.Errorf("msmtprc: %w", err)
 	}
 	boundary := fmt.Sprintf("----=_Part_%d_%d", m.cfg.Now().Unix(), os.Getpid())
-	mime := buildMIMEMessage(name, from, msg.To, msg.Subject, boundary, textBody, htmlBody, msg.Inlines)
+	mime := buildMIMEMessage(name, from, msg.To, msg.Subject, boundary, textBody, htmlBody, msg.Inlines, msg.Attachments)
 	return sendSMTPMSMTPCfg(ctx, acc, from, msg.To, mime)
 }
 
@@ -308,4 +326,20 @@ func validInlines(ctx context.Context, images []InlineImage) []InlineImage {
 		kept = append(kept, image)
 	}
 	return kept
+}
+
+func validateAttachments(ctx context.Context, attachments []Attachment) error {
+	for _, attachment := range attachments {
+		if !inlineFilename.MatchString(attachment.Filename) {
+			err := fmt.Errorf("attachment filename %q: %w", attachment.Filename, errInlineFilename)
+			slog.ErrorContext(ctx, "send-email attachment rejected", "err", err)
+			return err
+		}
+		if !inlineMIMEType.MatchString(attachment.MIMEType) {
+			err := fmt.Errorf("attachment %q mimetype %q: %w", attachment.Filename, attachment.MIMEType, errInlineMIMEType)
+			slog.ErrorContext(ctx, "send-email attachment rejected", "err", err)
+			return err
+		}
+	}
+	return nil
 }

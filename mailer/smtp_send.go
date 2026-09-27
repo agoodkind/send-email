@@ -19,39 +19,60 @@ const dialTimeout = 30 * time.Second
 func buildMIMEMessage(
 	fromDisplay, fromAddr, to, subject, boundary, textPart, htmlPart string,
 	inlines []InlineImage,
+	attachments []Attachment,
 ) []byte {
 	var b strings.Builder
 	fmt.Fprintf(&b, "From: %s <%s>\r\n", fromDisplay, fromAddr)
 	fmt.Fprintf(&b, "To: %s\r\n", to)
 	fmt.Fprintf(&b, "Subject: %s\r\n", subject)
 	b.WriteString("MIME-Version: 1.0\r\n")
+	if len(attachments) > 0 {
+		mixed := boundary + "_mixed"
+		fmt.Fprintf(&b, "Content-Type: multipart/mixed; boundary=%q\r\n\r\n", mixed)
+		fmt.Fprintf(&b, "--%s\r\n", mixed)
+		writeMIMEBody(&b, boundary, textPart, htmlPart, inlines)
+		for _, attachment := range attachments {
+			fmt.Fprintf(&b, "--%s\r\n", mixed)
+			fmt.Fprintf(&b, "Content-Type: %s; name=%q\r\n", attachment.MIMEType, attachment.Filename)
+			b.WriteString("Content-Transfer-Encoding: base64\r\n")
+			fmt.Fprintf(&b, "Content-Disposition: attachment; filename=%q\r\n\r\n", attachment.Filename)
+			b.WriteString(wrapBase64(attachment.Data))
+			b.WriteString("\r\n")
+		}
+		fmt.Fprintf(&b, "--%s--\r\n", mixed)
+		return []byte(b.String())
+	}
+	writeMIMEBody(&b, boundary, textPart, htmlPart, inlines)
+	return []byte(b.String())
+}
+
+func writeMIMEBody(b *strings.Builder, boundary, textPart, htmlPart string, inlines []InlineImage) {
 	if len(inlines) == 0 {
-		fmt.Fprintf(&b,
+		fmt.Fprintf(b,
 			"Content-Type: multipart/alternative; boundary=%q\r\n\r\n",
 			boundary,
 		)
-		writeAlternative(&b, boundary, textPart, htmlPart)
-		return []byte(b.String())
+		writeAlternative(b, boundary, textPart, htmlPart)
+		return
 	}
 	// Inline images ride in a related part beside the alternative one, so the
 	// HTML can reach them through cid: while a text-only reader still gets the
 	// plain part.
 	related := boundary + "_rel"
-	fmt.Fprintf(&b, "Content-Type: multipart/related; boundary=%q; type=%q\r\n\r\n", related, "multipart/alternative")
-	fmt.Fprintf(&b, "--%s\r\n", related)
-	fmt.Fprintf(&b, "Content-Type: multipart/alternative; boundary=%q\r\n\r\n", boundary)
-	writeAlternative(&b, boundary, textPart, htmlPart)
+	fmt.Fprintf(b, "Content-Type: multipart/related; boundary=%q; type=%q\r\n\r\n", related, "multipart/alternative")
+	fmt.Fprintf(b, "--%s\r\n", related)
+	fmt.Fprintf(b, "Content-Type: multipart/alternative; boundary=%q\r\n\r\n", boundary)
+	writeAlternative(b, boundary, textPart, htmlPart)
 	for _, image := range inlines {
-		fmt.Fprintf(&b, "--%s\r\n", related)
-		fmt.Fprintf(&b, "Content-Type: %s\r\n", image.MIMEType)
+		fmt.Fprintf(b, "--%s\r\n", related)
+		fmt.Fprintf(b, "Content-Type: %s\r\n", image.MIMEType)
 		b.WriteString("Content-Transfer-Encoding: base64\r\n")
-		fmt.Fprintf(&b, "Content-ID: <%s>\r\n", image.Filename)
-		fmt.Fprintf(&b, "Content-Disposition: inline; filename=%q\r\n\r\n", image.Filename)
+		fmt.Fprintf(b, "Content-ID: <%s>\r\n", image.Filename)
+		fmt.Fprintf(b, "Content-Disposition: inline; filename=%q\r\n\r\n", image.Filename)
 		b.WriteString(wrapBase64(image.Data))
 		b.WriteString("\r\n")
 	}
-	fmt.Fprintf(&b, "--%s--\r\n", related)
-	return []byte(b.String())
+	fmt.Fprintf(b, "--%s--\r\n", related)
 }
 
 func writeAlternative(b *strings.Builder, boundary, textPart, htmlPart string) {
