@@ -54,6 +54,8 @@ type Table struct {
 // InlineImage is one image carried inside the message and referenced from
 // [Message.HTML] as cid:Filename, so it renders in place rather than as a
 // download.
+//
+// [ContentHTML] blocks can also reference inline image filenames.
 type InlineImage struct {
 	Filename string
 	MIMEType string
