@@ -133,11 +133,11 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 	var htmlBody string
 	switch {
 	case msg.Content != nil:
-		htmlBody, err = renderEmailHTML("", nil, "", msg.Content, caller, host, si, m.cfg.Now)
+		htmlBody, err = renderHTML("", nil, "", msg.Content, caller, host, si, m.cfg.Now)
 	case len(msg.Tables) == 0 && msg.HTML == "":
 		htmlBody, err = RenderHTML(msg.Body, caller, host, si, m.cfg.Now)
 	default:
-		htmlBody, err = renderHTML(msg.Body, msg.Tables, msg.HTML, caller, host, si, m.cfg.Now)
+		htmlBody, err = renderHTML(msg.Body, msg.Tables, msg.HTML, nil, caller, host, si, m.cfg.Now)
 	}
 	if err != nil {
 		return fmt.Errorf("render html: %w", err)

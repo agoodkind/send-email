@@ -49,7 +49,7 @@ type htmlEmailData struct {
 // now defaults to [SystemClock] when nil; callers may inject a clock for
 // deterministic tests.
 func RenderHTML(msg, caller, hostname string, si SysInfo, now Clock) (string, error) {
-	return renderHTML(msg, nil, "", caller, hostname, si, now)
+	return renderHTML(msg, nil, "", nil, caller, hostname, si, now)
 }
 
 // renderHTML builds the HTML body with a metadata footer. rawHTML comes from
@@ -59,15 +59,12 @@ func renderHTML(
 	msg string,
 	tables []Table,
 	rawHTML string,
+	content []ContentBlock,
 	caller string,
 	hostname string,
 	si SysInfo,
 	now Clock,
 ) (string, error) {
-	return renderEmailHTML(msg, tables, rawHTML, nil, caller, hostname, si, now)
-}
-
-func renderEmailHTML(msg string, tables []Table, rawHTML string, content []ContentBlock, caller, hostname string, si SysInfo, now Clock) (string, error) {
 	if now == nil {
 		now = SystemClock
 	}

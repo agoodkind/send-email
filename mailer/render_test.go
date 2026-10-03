@@ -78,7 +78,7 @@ func TestRenderHTML_keepsRawHTMLAndFooter(t *testing.T) {
 		ISPIPv6:       "Other IPv6 ISP",
 	}
 	raw := `<img src="cid:chart.png" alt="chart" width="600">`
-	html, err := renderHTML("body", nil, raw, "c2", "host2", si, nil)
+	html, err := renderHTML("body", nil, raw, nil, "c2", "host2", si, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestRenderHTML_usesLegacyISPForBothFamilies(t *testing.T) {
 func TestRenderHTML_escapesBody(t *testing.T) {
 	t.Parallel()
 	si := CollectSysInfo(context.Background())
-	html, err := renderHTML("<script>x</script>", nil, "", "c", "h", si, nil)
+	html, err := renderHTML("<script>x</script>", nil, "", nil, "c", "h", si, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
