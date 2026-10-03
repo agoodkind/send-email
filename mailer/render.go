@@ -24,6 +24,7 @@ type ipRow struct {
 }
 
 type htmlEmailData struct {
+	Content   []htmlContentBlock
 	Preheader string
 	BodyLines []string
 	Tables    []Table
@@ -63,11 +64,18 @@ func renderHTML(
 	si SysInfo,
 	now Clock,
 ) (string, error) {
+	return renderEmailHTML(msg, tables, rawHTML, nil, caller, hostname, si, now)
+}
+
+func renderEmailHTML(msg string, tables []Table, rawHTML string, content []ContentBlock, caller, hostname string, si SysInfo, now Clock) (string, error) {
 	if now == nil {
 		now = SystemClock
 	}
 	plainBody := RenderPlain(msg)
 	oneLine := strings.ReplaceAll(strings.TrimSpace(plainBody), "\n", " ")
+	if len(content) > 0 {
+		oneLine = strings.ReplaceAll(strings.TrimSpace(renderContentText(content[:1])), "\n", " ")
+	}
 	bodyLines := strings.Split(plainBody, "\n")
 	ispIPv4 := si.ISPIPv4
 	ispIPv6 := si.ISPIPv6
@@ -76,6 +84,7 @@ func renderHTML(
 		ispIPv6 = si.ISP
 	}
 	data := htmlEmailData{
+		Content:   contentHTMLBlocks(content),
 		Preheader: oneLine,
 		BodyLines: bodyLines,
 		Tables:    tables,

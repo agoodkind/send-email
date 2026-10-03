@@ -44,7 +44,7 @@ type Config struct {
 	Now Clock
 }
 
-// Table is one escaped table rendered after the message body.
+// Table renders escaped headers and cells in HTML and a plain-text table.
 type Table struct {
 	Caption string
 	Headers []string
@@ -69,6 +69,9 @@ type Attachment struct {
 
 // Message is one outbound email.
 type Message struct {
+	// Content defines the complete body order. It cannot be combined with Body,
+	// HTML, or Tables. HTML blocks require an explicit plain-text fallback.
+	Content []ContentBlock
 	To      string
 	Subject string
 	Body    string
@@ -108,6 +111,9 @@ func New(cfg Config) *Mailer {
 
 // Send renders rich HTML/text and delivers using the configured transport.
 func (m *Mailer) Send(ctx context.Context, msg Message) error {
+	if err := validateContent(msg); err != nil {
+		return err
+	}
 	host, err := os.Hostname()
 	if err != nil {
 		host = "unknown"
@@ -116,14 +122,19 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 
 	si := CollectSysInfo(ctx)
 	textMessage := msg.Body
-	if len(msg.Tables) > 0 {
+	if msg.Content != nil {
+		textMessage = renderContentText(msg.Content)
+	} else if len(msg.Tables) > 0 {
 		textMessage = formatTextTables(textMessage, msg.Tables)
 	}
 	textBody := FormatTextBody(textMessage, caller, host, m.cfg.Now)
 	var htmlBody string
-	if len(msg.Tables) == 0 && msg.HTML == "" {
+	switch {
+	case msg.Content != nil:
+		htmlBody, err = renderEmailHTML("", nil, "", msg.Content, caller, host, si, m.cfg.Now)
+	case len(msg.Tables) == 0 && msg.HTML == "":
 		htmlBody, err = RenderHTML(msg.Body, caller, host, si, m.cfg.Now)
-	} else {
+	default:
 		htmlBody, err = renderHTML(msg.Body, msg.Tables, msg.HTML, caller, host, si, m.cfg.Now)
 	}
 	if err != nil {
