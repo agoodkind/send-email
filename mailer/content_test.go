@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	stdhtml "html"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -30,14 +31,14 @@ func orderedTestMessage() Message {
 	}}
 }
 
-func assertContentAlternatives(t *testing.T, plain, html string) {
+func assertContentAlternatives(t *testing.T, plain, html, preview string) {
 	t.Helper()
 	preheaderStart := strings.Index(html, `<div style="display:none;`)
 	if preheaderStart < 0 {
 		t.Fatal("missing email preview")
 	}
 	preheaderEnd := strings.Index(html[preheaderStart:], "</div>") + preheaderStart
-	if preheaderEnd < preheaderStart || !strings.Contains(html[preheaderStart:preheaderEnd], "first &lt;unsafe&gt;") {
+	if preheaderEnd < preheaderStart || !strings.Contains(html[preheaderStart:preheaderEnd], stdhtml.EscapeString(normalizePreheader(preview))) {
 		t.Fatal("email preview omitted first content")
 	}
 	html = html[:preheaderStart] + html[preheaderEnd+len("</div>"):]
@@ -80,14 +81,34 @@ func TestSendHTTPOrderedContent(t *testing.T) {
 	}))
 	defer server.Close()
 	mailer := New(Config{Transport: MethodHTTP, SMTP2GOAPIKey: "test", SMTP2GOEndpoint: server.URL})
-	if err := mailer.Send(context.Background(), orderedTestMessage()); err != nil {
-		t.Fatal(err)
+	for _, preview := range []string{"", "custom <preview>\nnext"} {
+		message := orderedTestMessage()
+		message.Preheader = preview
+		if err := mailer.Send(context.Background(), message); err != nil {
+			t.Fatal(err)
+		}
+		received := <-requests
+		if preview == "" {
+			preview = "first <unsafe>"
+		}
+		assertContentAlternatives(t, received.plain, received.html, preview)
 	}
-	received := <-requests
-	assertContentAlternatives(t, received.plain, received.html)
 }
 
 func TestSendSMTPOrderedContent(t *testing.T) {
+	for _, preview := range []string{"", "custom <preview>\nnext"} {
+		message := orderedTestMessage()
+		message.Preheader = preview
+		plain, html := sendContentSMTPMessage(t, message)
+		if preview == "" {
+			preview = "first <unsafe>"
+		}
+		assertContentAlternatives(t, plain, html, preview)
+	}
+}
+
+func sendContentSMTPMessage(t *testing.T, outbound Message) (string, string) {
+	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -104,7 +125,7 @@ func TestSendSMTPOrderedContent(t *testing.T) {
 	mailer := New(Config{Transport: MethodSendmail, MsmtprcPath: config})
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := mailer.Send(ctx, orderedTestMessage()); err != nil {
+	if err := mailer.Send(ctx, outbound); err != nil {
 		t.Fatal(err)
 	}
 	if err := <-errors; err != nil {
@@ -135,7 +156,25 @@ func TestSendSMTPOrderedContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertContentAlternatives(t, string(plainBytes), string(htmlBytes))
+	return string(plainBytes), string(htmlBytes)
+}
+
+func TestSendSMTPPreheaderPreservesLegacyBody(t *testing.T) {
+	for _, preview := range []string{"", "custom <preview>\nnext"} {
+		body := "legacy <body>\nsecond"
+		plain, html := sendContentSMTPMessage(t, Message{To: "recipient@example.com", Body: body, Preheader: preview})
+		if preview == "" {
+			preview = body
+		}
+		start := strings.Index(html, `<div style="display:none;`)
+		end := start + strings.Index(html[start:], "</div>")
+		if !strings.Contains(html[start:end], stdhtml.EscapeString(normalizePreheader(preview))) {
+			t.Fatal("legacy preview was not preserved or overridden")
+		}
+		if !strings.Contains(plain, body) || strings.Count(plain, "Caller:") != 1 || strings.Count(html, `class="meta"`) != 1 {
+			t.Fatal("legacy body or metadata changed")
+		}
+	}
 }
 
 func receiveContentSMTP(listener net.Listener, result chan<- []byte) error {

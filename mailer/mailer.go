@@ -74,13 +74,15 @@ type Message struct {
 	// Content defines the complete body order. It cannot be combined with Body,
 	// HTML, or Tables. HTML blocks require an explicit plain-text fallback.
 	Content []ContentBlock
-	To      string
-	Subject string
-	Body    string
-	From    string
-	Name    string
-	Caller  string
-	Tables  []Table
+	// Preheader overrides the inbox preview. Empty uses the body preview.
+	Preheader string
+	To        string
+	Subject   string
+	Body      string
+	From      string
+	Name      string
+	Caller    string
+	Tables    []Table
 	// HTML is inserted into the HTML part verbatim, after the body and before
 	// the tables. The caller owns its correctness and its escaping; it is not
 	// escaped here, so never build it from untrusted input. The plain text
@@ -130,15 +132,14 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 		textMessage = formatTextTables(textMessage, msg.Tables)
 	}
 	textBody := FormatTextBody(textMessage, caller, host, m.cfg.Now)
-	var htmlBody string
-	switch {
-	case msg.Content != nil:
-		htmlBody, err = renderHTML("", nil, "", msg.Content, caller, host, si, m.cfg.Now)
-	case len(msg.Tables) == 0 && msg.HTML == "":
-		htmlBody, err = RenderHTML(msg.Body, caller, host, si, m.cfg.Now)
-	default:
-		htmlBody, err = renderHTML(msg.Body, msg.Tables, msg.HTML, nil, caller, host, si, m.cfg.Now)
+	preheader := msg.Preheader
+	if preheader == "" {
+		preheader = msg.Body
+		if len(msg.Content) > 0 {
+			preheader = renderContentText(msg.Content[:1])
+		}
 	}
+	htmlBody, err := renderHTML(msg.Body, msg.Tables, msg.HTML, msg.Content, normalizePreheader(preheader), caller, host, si, m.cfg.Now)
 	if err != nil {
 		return fmt.Errorf("render html: %w", err)
 	}

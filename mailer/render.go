@@ -49,7 +49,7 @@ type htmlEmailData struct {
 // now defaults to [SystemClock] when nil; callers may inject a clock for
 // deterministic tests.
 func RenderHTML(msg, caller, hostname string, si SysInfo, now Clock) (string, error) {
-	return renderHTML(msg, nil, "", nil, caller, hostname, si, now)
+	return renderHTML(msg, nil, "", nil, normalizePreheader(msg), caller, hostname, si, now)
 }
 
 // renderHTML builds the HTML body with a metadata footer. rawHTML comes from
@@ -60,6 +60,7 @@ func renderHTML(
 	tables []Table,
 	rawHTML string,
 	content []ContentBlock,
+	preheader string,
 	caller string,
 	hostname string,
 	si SysInfo,
@@ -69,10 +70,6 @@ func renderHTML(
 		now = SystemClock
 	}
 	plainBody := RenderPlain(msg)
-	oneLine := strings.ReplaceAll(strings.TrimSpace(plainBody), "\n", " ")
-	if len(content) > 0 {
-		oneLine = strings.ReplaceAll(strings.TrimSpace(renderContentText(content[:1])), "\n", " ")
-	}
 	bodyLines := strings.Split(plainBody, "\n")
 	ispIPv4 := si.ISPIPv4
 	ispIPv6 := si.ISPIPv6
@@ -82,7 +79,7 @@ func renderHTML(
 	}
 	data := htmlEmailData{
 		Content:   contentHTMLBlocks(content),
-		Preheader: oneLine,
+		Preheader: preheader,
 		BodyLines: bodyLines,
 		Tables:    tables,
 		// #nosec G203 -- Message.HTML is the caller's own markup, documented as
@@ -115,6 +112,10 @@ func renderHTML(
 		return "", wrapped
 	}
 	return buf.String(), nil
+}
+
+func normalizePreheader(text string) string {
+	return strings.ReplaceAll(strings.TrimSpace(RenderPlain(text)), "\n", " ")
 }
 
 func displayISP(familyISP string) string {
