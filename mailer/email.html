@@ -21,10 +21,19 @@ body { font: 14px -apple-system, BlinkMacSystemFont, Arial, sans-serif; margin: 
 <div style="display:none;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;font-family:sans-serif;">
 {{.Preheader}}<span aria-hidden="true">&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</span>
 </div>
+{{if .Content}}{{range .Content}}
+{{if .Lines}}<div>{{range $i, $line := .Lines}}{{if $i}}<br>{{end}}{{$line}}{{end}}</div>{{end}}
+{{if .HTML}}<div class="custom">{{.HTML}}</div>{{end}}
+{{if .Table}}{{template "reportTable" .Table}}{{end}}
+{{end}}{{else}}
 <div>{{range $i, $line := .BodyLines}}{{if $i}}<br>
 {{end}}{{$line}}{{end}}</div>
 {{if .HTMLBlock}}<div class="custom">{{.HTMLBlock}}</div>{{end}}
 {{range .Tables}}
+{{template "reportTable" .}}
+{{end}}
+{{end}}
+{{define "reportTable"}}
 <table class="report">
   {{if .Caption}}<caption>{{.Caption}}</caption>{{end}}
   {{if .Headers}}<thead><tr>{{range .Headers}}<th scope="col">{{.}}</th>{{end}}</tr></thead>{{end}}

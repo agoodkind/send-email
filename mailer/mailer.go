@@ -44,7 +44,7 @@ type Config struct {
 	Now Clock
 }
 
-// Table is one escaped table rendered after the message body.
+// Table renders escaped headers and cells in HTML and a plain-text table.
 type Table struct {
 	Caption string
 	Headers []string
@@ -54,6 +54,8 @@ type Table struct {
 // InlineImage is one image carried inside the message and referenced from
 // [Message.HTML] as cid:Filename, so it renders in place rather than as a
 // download.
+//
+// [ContentHTML] blocks can also reference inline image filenames.
 type InlineImage struct {
 	Filename string
 	MIMEType string
@@ -69,13 +71,18 @@ type Attachment struct {
 
 // Message is one outbound email.
 type Message struct {
-	To      string
-	Subject string
-	Body    string
-	From    string
-	Name    string
-	Caller  string
-	Tables  []Table
+	// Content defines the complete body order. It cannot be combined with Body,
+	// HTML, or Tables. HTML blocks require an explicit plain-text fallback.
+	Content []ContentBlock
+	// Preheader overrides the inbox preview. Empty uses the body preview.
+	Preheader string
+	To        string
+	Subject   string
+	Body      string
+	From      string
+	Name      string
+	Caller    string
+	Tables    []Table
 	// HTML is inserted into the HTML part verbatim, after the body and before
 	// the tables. The caller owns its correctness and its escaping; it is not
 	// escaped here, so never build it from untrusted input. The plain text
@@ -108,6 +115,9 @@ func New(cfg Config) *Mailer {
 
 // Send renders rich HTML/text and delivers using the configured transport.
 func (m *Mailer) Send(ctx context.Context, msg Message) error {
+	if err := validateContent(msg); err != nil {
+		return err
+	}
 	host, err := os.Hostname()
 	if err != nil {
 		host = "unknown"
@@ -116,16 +126,20 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 
 	si := CollectSysInfo(ctx)
 	textMessage := msg.Body
-	if len(msg.Tables) > 0 {
+	if msg.Content != nil {
+		textMessage = renderContentText(msg.Content)
+	} else if len(msg.Tables) > 0 {
 		textMessage = formatTextTables(textMessage, msg.Tables)
 	}
 	textBody := FormatTextBody(textMessage, caller, host, m.cfg.Now)
-	var htmlBody string
-	if len(msg.Tables) == 0 && msg.HTML == "" {
-		htmlBody, err = RenderHTML(msg.Body, caller, host, si, m.cfg.Now)
-	} else {
-		htmlBody, err = renderHTML(msg.Body, msg.Tables, msg.HTML, caller, host, si, m.cfg.Now)
+	preheader := msg.Preheader
+	if preheader == "" {
+		preheader = msg.Body
+		if len(msg.Content) > 0 {
+			preheader = renderContentText(msg.Content[:1])
+		}
 	}
+	htmlBody, err := renderHTML(msg.Body, msg.Tables, msg.HTML, msg.Content, normalizePreheader(preheader), caller, host, si, m.cfg.Now)
 	if err != nil {
 		return fmt.Errorf("render html: %w", err)
 	}
