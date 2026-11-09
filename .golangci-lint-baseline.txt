@@ -1,4 +1,4 @@
-# golangci-lint: generated_at=2026-11-09T02:26:41Z
+# golangci-lint: generated_at=2026-11-09T15:48:31Z
 mailer/content.go:90:2: missing whitespace below this line (after-block) (wsl_v5)	# golangci-lint:first_added=2026-11-09T02:26:41Z last_seen=2026-11-09T02:26:41Z
 mailer/content.go:43:2: missing whitespace above this line (invalid statement above range) (wsl_v5)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-09T02:26:41Z
 mailer/content.go:91:2: missing whitespace above this line (too many lines above return) (wsl_v5)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-09T02:26:41Z
