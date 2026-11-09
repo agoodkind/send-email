@@ -69,6 +69,7 @@ func renderHTML(
 	if now == nil {
 		now = SystemClock
 	}
+
 	plainBody := RenderPlain(msg)
 	bodyLines := strings.Split(plainBody, "\n")
 	ispIPv4 := si.ISPIPv4
@@ -77,6 +78,7 @@ func renderHTML(
 		ispIPv4 = si.ISP
 		ispIPv6 = si.ISP
 	}
+
 	data := htmlEmailData{
 		Content:   contentHTMLBlocks(content),
 		Preheader: preheader,
@@ -103,14 +105,18 @@ func renderHTML(
 	if err != nil {
 		wrapped := fmt.Errorf("parse email template: %w", err)
 		slog.Error("email template parse failed", "err", wrapped)
+
 		return "", wrapped
 	}
+
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {
 		wrapped := fmt.Errorf("execute email template: %w", err)
 		slog.Error("email template execute failed", "err", wrapped)
+
 		return "", wrapped
 	}
+
 	return buf.String(), nil
 }
 
@@ -122,20 +128,26 @@ func displayISP(familyISP string) string {
 	if familyISP != "" {
 		return familyISP
 	}
-	return "N/A"
+
+	return notAvailable
 }
 
 func parseIPRows(lines []string) []ipRow {
 	var rows []ipRow
+
 	for _, line := range lines {
 		parts := strings.Fields(line)
 		if len(parts) >= 2 {
-			rows = append(rows, ipRow{
-				Iface: parts[0],
-				IP:    strings.Join(parts[1:], " "),
-			})
+			rows = append(
+				rows,
+				ipRow{
+					Iface: parts[0],
+					IP:    strings.Join(parts[1:], " "),
+				},
+			)
 		}
 	}
+
 	return rows
 }
 
@@ -147,7 +159,9 @@ func FormatTextBody(msg, caller, hostname string, now Clock) string {
 	if now == nil {
 		now = SystemClock
 	}
+
 	plain := RenderPlain(msg)
+
 	return fmt.Sprintf(
 		"%s\n\nCaller: %s\nHost: %s\nTime: %s",
 		plain,
@@ -159,17 +173,21 @@ func FormatTextBody(msg, caller, hostname string, now Clock) string {
 
 func formatTextTables(body string, tables []Table) string {
 	lines := []string{body}
+
 	for _, table := range tables {
 		lines = append(lines, "")
 		if table.Caption != "" {
 			lines = append(lines, table.Caption)
 		}
+
 		if len(table.Headers) > 0 {
 			lines = append(lines, strings.Join(table.Headers, " | "))
 		}
+
 		for _, row := range table.Rows {
 			lines = append(lines, strings.Join(row, " | "))
 		}
 	}
+
 	return strings.Join(lines, "\n")
 }

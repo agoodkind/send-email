@@ -45,6 +45,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, usageText, os.Args[0])
 			os.Exit(1)
 		}
+
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
@@ -55,12 +56,14 @@ func run(ctx context.Context, argv []string) error {
 	if err != nil {
 		return err
 	}
+
 	if args.apiKey == "" {
 		args.apiKey = mailer.LoadAPIKeyFromEnvFiles([]string{
 			"/etc/mwan-watchdog/watchdog.env",
 			"/etc/mwan/mwan.env",
 		})
 	}
+
 	cfg := mailer.Config{
 		SMTP2GOAPIKey:     args.apiKey,
 		MsmtprcPath:       "",
@@ -72,29 +75,39 @@ func run(ctx context.Context, argv []string) error {
 	if args.useHTTP {
 		cfg.Transport = mailer.MethodHTTP
 	}
+
 	m := mailer.New(cfg)
-	if err := m.Send(ctx, mailer.Message{
-		To:      args.to,
-		Subject: args.subject,
-		Body:    args.msg,
-		From:    args.from,
-		Name:    args.name,
-		Caller:  args.caller,
-	}); err != nil {
+	if err := m.Send(
+		ctx,
+		mailer.Message{
+			To:      args.to,
+			Subject: args.subject,
+			Body:    args.msg,
+			From:    args.from,
+			Name:    args.name,
+			Caller:  args.caller,
+		},
+	); err != nil {
 		wrapped := fmt.Errorf("send: %w", err)
 		slog.ErrorContext(ctx, "send-email failed", "err", wrapped)
+
 		return wrapped
 	}
+
 	fmt.Printf("Email sent to %s via %s\n", args.to, m.Method())
+
 	return nil
 }
 
 func parseArgs(argv []string) (cliArgs, error) {
 	raw := argv[1:]
 	useHTTP := slices.Contains(raw, "--http")
-	filtered := slices.DeleteFunc(slices.Clone(raw), func(s string) bool {
-		return s == "--http"
-	})
+	filtered := slices.DeleteFunc(
+		slices.Clone(raw),
+		func(s string) bool {
+			return s == "--http"
+		},
+	)
 
 	var args cliArgs
 	args.useHTTP = useHTTP
@@ -111,11 +124,14 @@ func parseArgs(argv []string) (cliArgs, error) {
 	if err := fs.Parse(filtered); err != nil {
 		return cliArgs{}, errUsage
 	}
+
 	if fs.NArg() != 0 {
 		return cliArgs{}, errUsage
 	}
+
 	if args.to == "" || args.subject == "" || args.msg == "" {
 		return cliArgs{}, errUsage
 	}
+
 	return args, nil
 }

@@ -17,7 +17,13 @@ import (
 const dialTimeout = 30 * time.Second
 
 func buildMIMEMessage(
-	fromDisplay, fromAddr, to, subject, boundary, textPart, htmlPart string,
+	fromDisplay string,
+	fromAddr string,
+	to string,
+	subject string,
+	boundary string,
+	textPart string,
+	htmlPart string,
 	inlines []InlineImage,
 	attachments []Attachment,
 ) []byte {
@@ -31,38 +37,57 @@ func buildMIMEMessage(
 		fmt.Fprintf(&b, "Content-Type: multipart/mixed; boundary=%q\r\n\r\n", mixed)
 		fmt.Fprintf(&b, "--%s\r\n", mixed)
 		writeMIMEBody(&b, boundary, textPart, htmlPart, inlines)
+
 		for _, attachment := range attachments {
 			fmt.Fprintf(&b, "--%s\r\n", mixed)
-			fmt.Fprintf(&b, "Content-Type: %s; name=%q\r\n", attachment.MIMEType, attachment.Filename)
+			fmt.Fprintf(
+				&b,
+				"Content-Type: %s; name=%q\r\n",
+				attachment.MIMEType,
+				attachment.Filename,
+			)
 			b.WriteString("Content-Transfer-Encoding: base64\r\n")
-			fmt.Fprintf(&b, "Content-Disposition: attachment; filename=%q\r\n\r\n", attachment.Filename)
+			fmt.Fprintf(
+				&b,
+				"Content-Disposition: attachment; filename=%q\r\n\r\n",
+				attachment.Filename,
+			)
 			b.WriteString(wrapBase64(attachment.Data))
 			b.WriteString("\r\n")
 		}
+
 		fmt.Fprintf(&b, "--%s--\r\n", mixed)
+
 		return []byte(b.String())
 	}
+
 	writeMIMEBody(&b, boundary, textPart, htmlPart, inlines)
+
 	return []byte(b.String())
 }
 
 func writeMIMEBody(b *strings.Builder, boundary, textPart, htmlPart string, inlines []InlineImage) {
 	if len(inlines) == 0 {
-		fmt.Fprintf(b,
-			"Content-Type: multipart/alternative; boundary=%q\r\n\r\n",
-			boundary,
-		)
+		fmt.Fprintf(b, "Content-Type: multipart/alternative; boundary=%q\r\n\r\n", boundary)
 		writeAlternative(b, boundary, textPart, htmlPart)
+
 		return
 	}
+
 	// Inline images ride in a related part beside the alternative one, so the
 	// HTML can reach them through cid: while a text-only reader still gets the
 	// plain part.
 	related := boundary + "_rel"
-	fmt.Fprintf(b, "Content-Type: multipart/related; boundary=%q; type=%q\r\n\r\n", related, "multipart/alternative")
+	fmt.Fprintf(
+		b,
+		"Content-Type: multipart/related; boundary=%q; type=%q\r\n\r\n",
+		related,
+		"multipart/alternative",
+	)
 	fmt.Fprintf(b, "--%s\r\n", related)
 	fmt.Fprintf(b, "Content-Type: multipart/alternative; boundary=%q\r\n\r\n", boundary)
 	writeAlternative(b, boundary, textPart, htmlPart)
+
 	for _, image := range inlines {
 		fmt.Fprintf(b, "--%s\r\n", related)
 		fmt.Fprintf(b, "Content-Type: %s\r\n", image.MIMEType)
@@ -72,6 +97,7 @@ func writeMIMEBody(b *strings.Builder, boundary, textPart, htmlPart string, inli
 		b.WriteString(wrapBase64(image.Data))
 		b.WriteString("\r\n")
 	}
+
 	fmt.Fprintf(b, "--%s--\r\n", related)
 }
 
@@ -91,18 +117,21 @@ func writeAlternative(b *strings.Builder, boundary, textPart, htmlPart string) {
 func wrapBase64(data []byte) string {
 	encoded := base64.StdEncoding.EncodeToString(data)
 	var out strings.Builder
+
 	for start := 0; start < len(encoded); start += base64LineLength {
 		end := min(start+base64LineLength, len(encoded))
 		out.WriteString(encoded[start:end])
 		out.WriteString("\r\n")
 	}
+
 	return out.String()
 }
 
 func sendSMTPMSMTPCfg(
 	ctx context.Context,
 	acc Account,
-	fromAddr, to string,
+	fromAddr string,
+	to string,
 	msg []byte,
 ) error {
 	addr := net.JoinHostPort(acc.Host, strconv.Itoa(acc.Port))
@@ -112,6 +141,7 @@ func sendSMTPMSMTPCfg(
 		slog.ErrorContext(ctx, "smtp dial failed", "err", err, "addr", addr)
 		return fmt.Errorf("smtp dial %s: %w", addr, err)
 	}
+
 	defer func() { _ = conn.Close() }()
 
 	client, err := smtp.NewClient(conn, acc.Host)
@@ -119,6 +149,7 @@ func sendSMTPMSMTPCfg(
 		slog.ErrorContext(ctx, "smtp client failed", "err", err, "host", acc.Host)
 		return fmt.Errorf("smtp client %s: %w", acc.Host, err)
 	}
+
 	defer func() { _ = client.Close() }()
 
 	if acc.TLSStartTLS {
@@ -128,37 +159,46 @@ func sendSMTPMSMTPCfg(
 			return fmt.Errorf("starttls: %w", err)
 		}
 	}
+
 	auth := smtp.PlainAuth("", acc.User, acc.Password, acc.Host)
 	if err := client.Auth(auth); err != nil {
 		slog.ErrorContext(ctx, "smtp auth failed", "err", err, "host", acc.Host, "user", acc.User)
 		return fmt.Errorf("auth: %w", err)
 	}
+
 	if err := client.Mail(fromAddr); err != nil {
 		slog.ErrorContext(ctx, "smtp mail-from failed", "err", err, "from", fromAddr)
 		return fmt.Errorf("mail from: %w", err)
 	}
+
 	if err := client.Rcpt(to); err != nil {
 		slog.ErrorContext(ctx, "smtp rcpt failed", "err", err, "to", to)
 		return fmt.Errorf("rcpt: %w", err)
 	}
+
 	w, err := client.Data()
 	if err != nil {
 		slog.ErrorContext(ctx, "smtp data open failed", "err", err)
 		return fmt.Errorf("smtp data: %w", err)
 	}
+
 	if _, err := w.Write(msg); err != nil {
 		slog.ErrorContext(ctx, "smtp data write failed", "err", err)
 		return fmt.Errorf("smtp write: %w", err)
 	}
+
 	if err := w.Close(); err != nil {
 		slog.ErrorContext(ctx, "smtp data close failed", "err", err)
 		return fmt.Errorf("smtp close: %w", err)
 	}
+
 	if err := client.Quit(); err != nil {
 		slog.ErrorContext(ctx, "smtp quit failed", "err", err)
 		return fmt.Errorf("smtp quit: %w", err)
 	}
+
 	slog.InfoContext(ctx, "smtp send ok", "host", acc.Host, "to", to)
+
 	return nil
 }
 
