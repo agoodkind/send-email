@@ -8,22 +8,32 @@ import (
 )
 
 func linuxDiskRoot() string {
-	var st syscall.Statfs_t
-	err := syscall.Statfs("/", &st)
+	var filesystem syscall.Statfs_t
+	err := syscall.Statfs("/", &filesystem)
 	if err != nil {
-		return "N/A"
+		return notAvailable
 	}
-	if st.Bsize < 0 {
-		return "N/A"
+
+	if filesystem.Bsize < 0 {
+		return notAvailable
 	}
-	bsize := uint64(st.Bsize)
-	total := st.Blocks * bsize
-	free := st.Bavail * bsize
+
+	const percentage = 100
+	const bytesPerGiB = 1024 * 1024 * 1024
+
+	blockSize := uint64(filesystem.Bsize)
+	total := filesystem.Blocks * blockSize
+	free := filesystem.Bavail * blockSize
 	used := total - free
-	pct := float64(0)
+	percent := float64(0)
 	if total > 0 {
-		pct = float64(used) * 100 / float64(total)
+		percent = float64(used) * percentage / float64(total)
 	}
-	return fmt.Sprintf("%.1fGiB/%.1fGiB (%.0f%%)",
-		float64(used)/(1<<30), float64(total)/(1<<30), pct)
+
+	return fmt.Sprintf(
+		"%.1fGiB/%.1fGiB (%.0f%%)",
+		float64(used)/bytesPerGiB,
+		float64(total)/bytesPerGiB,
+		percent,
+	)
 }

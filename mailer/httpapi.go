@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -20,6 +21,8 @@ const (
 	smtp2goDial    = 10 * time.Second
 )
 
+var errSMTP2GOHTTP = errors.New("smtp2go http")
+
 // credential carries the SMTP2GO API key. The struct wrapper exists so
 // gosec G117 (which flags string fields whose name or json key matches a
 // secret pattern) does not see a string-kind field, while still emitting
@@ -34,6 +37,7 @@ func (c credential) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshal credential: %w", err)
 	}
+
 	return out, nil
 }
 
@@ -59,24 +63,32 @@ type smtp2goFile struct {
 func smtp2goInlines(images []InlineImage) []smtp2goFile {
 	files := make([]smtp2goFile, 0, len(images))
 	for _, image := range images {
-		files = append(files, smtp2goFile{
-			Filename: image.Filename,
-			FileBlob: base64.StdEncoding.EncodeToString(image.Data),
-			MIMEType: image.MIMEType,
-		})
+		files = append(
+			files,
+			smtp2goFile{
+				Filename: image.Filename,
+				FileBlob: base64.StdEncoding.EncodeToString(image.Data),
+				MIMEType: image.MIMEType,
+			},
+		)
 	}
+
 	return files
 }
 
 func smtp2goAttachments(attachments []Attachment) []smtp2goFile {
 	files := make([]smtp2goFile, 0, len(attachments))
 	for _, attachment := range attachments {
-		files = append(files, smtp2goFile{
-			Filename: attachment.Filename,
-			FileBlob: base64.StdEncoding.EncodeToString(attachment.Data),
-			MIMEType: attachment.MIMEType,
-		})
+		files = append(
+			files,
+			smtp2goFile{
+				Filename: attachment.Filename,
+				FileBlob: base64.StdEncoding.EncodeToString(attachment.Data),
+				MIMEType: attachment.MIMEType,
+			},
+		)
 	}
+
 	return files
 }
 
@@ -96,7 +108,14 @@ type smtp2goResponseData struct {
 
 func sendSMTP2GOHTTP(
 	ctx context.Context,
-	endpoint, apiKey, from, to, subject, textBody, htmlBody, senderName string,
+	endpoint string,
+	apiKey string,
+	from string,
+	to string,
+	subject string,
+	textBody string,
+	htmlBody string,
+	senderName string,
 	inlines []InlineImage,
 	attachments []Attachment,
 	bindIface string,
@@ -117,20 +136,21 @@ func sendSMTP2GOHTTP(
 			{Header: "X-Sender-Name", Value: senderName},
 		}
 	}
+
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		slog.ErrorContext(ctx, "smtp2go marshal failed", "err", err)
 		return fmt.Errorf("marshal smtp2go payload: %w", err)
 	}
+
 	cctx, cancel := context.WithTimeout(ctx, smtp2goTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(
-		cctx, http.MethodPost, endpoint, bytes.NewReader(raw),
-	)
+	req, err := http.NewRequestWithContext(cctx, http.MethodPost, endpoint, bytes.NewReader(raw))
 	if err != nil {
 		slog.ErrorContext(ctx, "smtp2go request build failed", "err", err)
 		return fmt.Errorf("build smtp2go request: %w", err)
 	}
+
 	req.Header.Set("Content-Type", "application/json")
 
 	client, err := newSMTP2GOClient(bindIface)
@@ -144,27 +164,39 @@ func sendSMTP2GOHTTP(
 		slog.ErrorContext(ctx, "smtp2go request failed", "err", err)
 		return fmt.Errorf("smtp2go request: %w", err)
 	}
+
 	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		err := fmt.Errorf(
-			"smtp2go http %d: %s",
+			"%w %d: %s",
+			errSMTP2GOHTTP,
 			resp.StatusCode,
 			strings.TrimSpace(string(body)),
 		)
-		slog.ErrorContext(ctx, "smtp2go non-2xx",
-			"err", err,
-			"status", resp.StatusCode,
-			"body", strings.TrimSpace(string(body)))
+		slog.ErrorContext(
+			ctx,
+			"smtp2go non-2xx",
+			"err",
+			err,
+			"status",
+			resp.StatusCode,
+			"body",
+			strings.TrimSpace(string(body)),
+		)
+
 		return err
 	}
+
 	var parsed smtp2goResponse
 	if uerr := json.Unmarshal(body, &parsed); uerr == nil &&
 		parsed.Data.Succeeded < 1 && parsed.Data.Error != "" {
 		slog.ErrorContext(ctx, "smtp2go api error", "err", parsed.Data.Error)
 		return fmt.Errorf("smtp2go api: %s", parsed.Data.Error)
 	}
+
 	slog.InfoContext(ctx, "smtp2go send ok", "to", to)
+
 	return nil
 }
 
@@ -173,12 +205,15 @@ func newSMTP2GOClient(bindIface string) (*http.Client, error) {
 	if bindIface == "" {
 		return client, nil
 	}
+
 	localIP, err := firstIPOnInterface(bindIface)
 	if err != nil {
 		wrapped := fmt.Errorf("bind interface %q: %w", bindIface, err)
 		slog.Error("smtp2go bind interface failed", "err", wrapped, "iface", bindIface)
+
 		return nil, wrapped
 	}
+
 	d := &net.Dialer{
 		Timeout:   smtp2goDial,
 		LocalAddr: &net.TCPAddr{IP: localIP},
@@ -189,11 +224,14 @@ func newSMTP2GOClient(bindIface string) (*http.Client, error) {
 			if derr != nil {
 				wrapped := fmt.Errorf("dial %s: %w", addr, derr)
 				slog.ErrorContext(ctx, "smtp2go dial failed", "err", wrapped, "addr", addr)
+
 				return nil, wrapped
 			}
+
 			return c, nil
 		},
 	}
+
 	return client, nil
 }
 
@@ -202,48 +240,59 @@ func firstIPOnInterface(name string) (net.IP, error) {
 	if err != nil {
 		wrapped := fmt.Errorf("interface %q: %w", name, err)
 		slog.Error("interface lookup failed", "err", wrapped, "iface", name)
+
 		return nil, wrapped
 	}
+
 	addrs, err := iface.Addrs()
 	if err != nil {
 		wrapped := fmt.Errorf("addrs %q: %w", name, err)
 		slog.Error("interface addrs failed", "err", wrapped, "iface", name)
+
 		return nil, wrapped
 	}
+
 	if ip := pickIPv4(addrs); ip != nil {
 		return ip, nil
 	}
+
 	if ip := pickIPv6(addrs); ip != nil {
 		return ip, nil
 	}
+
 	wrapped := fmt.Errorf("no usable IP on %q", name)
 	slog.Error("no usable IP on interface", "err", wrapped, "iface", name)
+
 	return nil, wrapped
 }
 
 func pickIPv4(addrs []net.Addr) net.IP {
 	for _, a := range addrs {
-		ip := addrIP(a)
-		if ip == nil || ip.IsLoopback() {
+		address := addrIP(a)
+		if address == nil || address.IsLoopback() {
 			continue
 		}
-		if v4 := ip.To4(); v4 != nil {
+
+		if v4 := address.To4(); v4 != nil {
 			return v4
 		}
 	}
+
 	return nil
 }
 
 func pickIPv6(addrs []net.Addr) net.IP {
 	for _, a := range addrs {
-		ip := addrIP(a)
-		if ip == nil || ip.IsLoopback() {
+		address := addrIP(a)
+		if address == nil || address.IsLoopback() {
 			continue
 		}
-		if ip.To4() == nil {
-			return ip
+
+		if address.To4() == nil {
+			return address
 		}
 	}
+
 	return nil
 }
 
@@ -254,5 +303,6 @@ func addrIP(a net.Addr) net.IP {
 	case *net.IPAddr:
 		return v.IP
 	}
+
 	return nil
 }

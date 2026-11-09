@@ -37,9 +37,11 @@ func validateContent(msg Message) error {
 	if msg.Content == nil {
 		return nil
 	}
+
 	if msg.Body != "" || msg.HTML != "" || len(msg.Tables) != 0 {
 		return fmt.Errorf("ordered content cannot be combined with Body, HTML, or Tables")
 	}
+
 	for index, block := range msg.Content {
 		switch block.Kind {
 		case ContentText:
@@ -47,17 +49,25 @@ func validateContent(msg Message) error {
 				return fmt.Errorf("content block %d: text cannot include HTML or Table", index)
 			}
 		case ContentHTML:
-			if strings.TrimSpace(block.Text) == "" || strings.TrimSpace(block.HTML) == "" || block.Table != nil {
-				return fmt.Errorf("content block %d: HTML requires markup and a text alternative without Table", index)
+			if strings.TrimSpace(block.Text) == "" || strings.TrimSpace(block.HTML) == "" ||
+				block.Table != nil {
+				return fmt.Errorf(
+					"content block %d: HTML requires markup and a text alternative without Table",
+					index,
+				)
 			}
 		case ContentTable:
 			if block.Table == nil || block.Text != "" || block.HTML != "" {
-				return fmt.Errorf("content block %d: table requires Table without Text or HTML", index)
+				return fmt.Errorf(
+					"content block %d: table requires Table without Text or HTML",
+					index,
+				)
 			}
 		default:
 			return fmt.Errorf("content block %d: unknown kind %q", index, block.Kind)
 		}
 	}
+
 	return nil
 }
 
@@ -65,11 +75,15 @@ func renderContentText(content []ContentBlock) string {
 	parts := make([]string, 0, len(content))
 	for _, block := range content {
 		if block.Kind == ContentTable {
-			parts = append(parts, strings.TrimPrefix(formatTextTables("", []Table{*block.Table}), "\n"))
+			parts = append(
+				parts,
+				strings.TrimPrefix(formatTextTables("", []Table{*block.Table}), "\n"),
+			)
 		} else {
 			parts = append(parts, RenderPlain(block.Text))
 		}
 	}
+
 	return strings.Join(parts, "\n\n")
 }
 
@@ -86,7 +100,9 @@ func contentHTMLBlocks(content []ContentBlock) []htmlContentBlock {
 		case ContentTable:
 			converted.Table = block.Table
 		}
+
 		blocks = append(blocks, converted)
 	}
+
 	return blocks
 }

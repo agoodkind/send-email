@@ -104,12 +104,15 @@ func New(cfg Config) *Mailer {
 	if cfg.DefaultFromDomain == "" {
 		cfg.DefaultFromDomain = "goodkind.io"
 	}
+
 	if cfg.Transport == "" {
 		cfg.Transport = MethodAuto
 	}
+
 	if cfg.Now == nil {
 		cfg.Now = SystemClock
 	}
+
 	return &Mailer{cfg: cfg}
 }
 
@@ -118,10 +121,12 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 	if err := validateContent(msg); err != nil {
 		return err
 	}
+
 	host, err := os.Hostname()
 	if err != nil {
 		host = "unknown"
 	}
+
 	from, name, caller := m.resolveIdentity(msg, host)
 
 	si := CollectSysInfo(ctx)
@@ -131,6 +136,7 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 	} else if len(msg.Tables) > 0 {
 		textMessage = formatTextTables(textMessage, msg.Tables)
 	}
+
 	textBody := FormatTextBody(textMessage, caller, host, m.cfg.Now)
 	preheader := msg.Preheader
 	if preheader == "" {
@@ -139,7 +145,18 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 			preheader = renderContentText(msg.Content[:1])
 		}
 	}
-	htmlBody, err := renderHTML(msg.Body, msg.Tables, msg.HTML, msg.Content, normalizePreheader(preheader), caller, host, si, m.cfg.Now)
+
+	htmlBody, err := renderHTML(
+		msg.Body,
+		msg.Tables,
+		msg.HTML,
+		msg.Content,
+		normalizePreheader(preheader),
+		caller,
+		host,
+		si,
+		m.cfg.Now,
+	)
 	if err != nil {
 		return fmt.Errorf("render html: %w", err)
 	}
@@ -148,12 +165,20 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 	if err := validateAttachments(ctx, msg.Attachments); err != nil {
 		return err
 	}
+
 	method := m.resolveMethod()
-	slog.InfoContext(ctx, "send-email dispatch",
-		"transport", string(method),
-		"from", from,
-		"to", msg.To,
-		"caller", caller)
+	slog.InfoContext(
+		ctx,
+		"send-email dispatch",
+		"transport",
+		string(method),
+		"from",
+		from,
+		"to",
+		msg.To,
+		"caller",
+		caller,
+	)
 	switch method {
 	case MethodHTTP:
 		return m.sendHTTP(ctx, from, name, msg, textBody, htmlBody)
@@ -163,10 +188,12 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 		// Auto resolves to HTTP or Sendmail above; reaching here is a bug.
 		err := errors.New("auto transport not resolved")
 		slog.ErrorContext(ctx, "send-email auto unresolved", "err", err)
+
 		return err
 	default:
 		err := fmt.Errorf("unknown transport %q", method)
 		slog.ErrorContext(ctx, "send-email unknown transport", "err", err)
+
 		return err
 	}
 }
@@ -176,14 +203,17 @@ func (m *Mailer) resolveIdentity(msg Message, host string) (from, name, caller s
 	if from == "" {
 		from = fmt.Sprintf("%s-mailer@%s", host, m.cfg.DefaultFromDomain)
 	}
+
 	name = strings.TrimSpace(msg.Name)
 	if name == "" {
 		name = host
 	}
+
 	caller = strings.TrimSpace(msg.Caller)
 	if caller == "" {
 		caller = "send-email"
 	}
+
 	return from, name, caller
 }
 
@@ -192,9 +222,11 @@ func (m *Mailer) resolveMethod() Transport {
 	if method != MethodAuto {
 		return method
 	}
+
 	if m.apiKey() != "" {
 		return MethodHTTP
 	}
+
 	return MethodSendmail
 }
 
@@ -203,46 +235,80 @@ func (m *Mailer) apiKey() string {
 	if key == "" {
 		key = strings.TrimSpace(os.Getenv("SMTP2GO_API_KEY"))
 	}
+
 	return key
 }
 
 func (m *Mailer) sendHTTP(
 	ctx context.Context,
-	from, name string,
+	from string,
+	name string,
 	msg Message,
-	textBody, htmlBody string,
+	textBody string,
+	htmlBody string,
 ) error {
 	key := m.apiKey()
 	if key == "" {
 		err := errors.New("SMTP2GO_API_KEY required for HTTP transport")
 		slog.ErrorContext(ctx, "send-email missing api key", "err", err)
+
 		return err
 	}
+
 	bind := m.cfg.BindInterface
 	endpoint := m.cfg.SMTP2GOEndpoint
 	if endpoint == "" {
 		endpoint = smtp2goSendURL
 	}
-	return sendSMTP2GOHTTP(ctx, endpoint, key, from, msg.To, msg.Subject, textBody, htmlBody, name, msg.Inlines, msg.Attachments, bind)
+
+	return sendSMTP2GOHTTP(
+		ctx,
+		endpoint,
+		key,
+		from,
+		msg.To,
+		msg.Subject,
+		textBody,
+		htmlBody,
+		name,
+		msg.Inlines,
+		msg.Attachments,
+		bind,
+	)
 }
 
 func (m *Mailer) sendSMTP(
 	ctx context.Context,
-	from, name string,
+	from string,
+	name string,
 	msg Message,
-	textBody, htmlBody string,
+	textBody string,
+	htmlBody string,
 ) error {
 	path := m.cfg.MsmtprcPath
 	if path == "" {
 		path = "/etc/msmtprc"
 	}
+
 	acc, err := LoadMsmtprc(path)
 	if err != nil {
 		slog.ErrorContext(ctx, "send-email msmtprc load failed", "err", err, "path", path)
 		return fmt.Errorf("msmtprc: %w", err)
 	}
+
 	boundary := fmt.Sprintf("----=_Part_%d_%d", m.cfg.Now().Unix(), os.Getpid())
-	mime := buildMIMEMessage(name, from, msg.To, msg.Subject, boundary, textBody, htmlBody, msg.Inlines, msg.Attachments)
+	mime := buildMIMEMessage(
+		name,
+		from,
+		msg.To,
+		msg.Subject,
+		boundary,
+		textBody,
+		htmlBody,
+		msg.Inlines,
+		msg.Attachments,
+	)
+
 	return sendSMTPMSMTPCfg(ctx, acc, from, msg.To, mime)
 }
 
@@ -251,9 +317,11 @@ func (m *Mailer) Method() string {
 	if m.cfg.Transport != MethodAuto && m.cfg.Transport != "" {
 		return string(m.cfg.Transport)
 	}
+
 	if m.apiKey() != "" {
 		return string(MethodHTTP)
 	}
+
 	return string(MethodSendmail)
 }
 
@@ -266,6 +334,7 @@ func LoadAPIKeyFromEnvFiles(paths []string) string {
 			return k
 		}
 	}
+
 	return ""
 }
 
@@ -274,18 +343,23 @@ func parseEnvFileKey(path, key string) (string, error) {
 	if err != nil {
 		return "", errors.New("read env file")
 	}
+
 	prefix := key + "="
+
 	for line := range strings.SplitSeq(string(data), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "#") {
 			continue
 		}
+
 		if rest, ok := strings.CutPrefix(line, prefix); ok {
 			val := strings.TrimSpace(rest)
 			val = strings.Trim(val, `"`)
+
 			return val, nil
 		}
 	}
+
 	return "", errors.New("key not found")
 }
 
@@ -295,25 +369,32 @@ func ParseBoolEnv(v string) bool {
 	return v == "1" || v == "true" || v == "yes"
 }
 
-// AtoiDefault parses s as an int or returns def when s is empty or invalid.
-func AtoiDefault(s string, def int) int {
-	s = strings.TrimSpace(s)
-	if s == "" {
+// AtoiDefault parses value as an int. It returns def when value is empty or
+// invalid.
+func AtoiDefault(value string, def int) int {
+	value = strings.TrimSpace(value)
+	if value == "" {
 		return def
 	}
-	n, err := strconv.Atoi(s)
+
+	n, err := strconv.Atoi(value)
 	if err != nil {
 		return def
 	}
+
 	return n
 }
 
 // errInlineFilename and errInlineMIMEType name why an inline image was left
 // out, so the log line carries a cause rather than only the offending value.
 var (
-	errInlineFilename     = errors.New("inline filename must be letters, digits, dot, dash, or underscore")
+	errInlineFilename = errors.New(
+		"inline filename must be letters, digits, dot, dash, or underscore",
+	)
 	errInlineMIMEType     = errors.New("inline mimetype must be one type/subtype pair")
-	errAttachmentFilename = errors.New("attachment filename must be letters, digits, dot, dash, or underscore")
+	errAttachmentFilename = errors.New(
+		"attachment filename must be letters, digits, dot, dash, or underscore",
+	)
 	errAttachmentMIMEType = errors.New("attachment mimetype must be one type/subtype pair")
 )
 
@@ -322,7 +403,9 @@ var (
 var inlineFilename = regexp.MustCompile(`^[A-Za-z0-9._-]{1,120}$`)
 
 // inlineMIMEType matches one RFC 2045 type/subtype pair of tokens.
-var inlineMIMEType = regexp.MustCompile(`^[A-Za-z0-9!#$%&'*+.^_` + "`" + `|~-]+/[A-Za-z0-9!#$%&'*+.^_` + "`" + `|~-]+$`)
+var inlineMIMEType = regexp.MustCompile(
+	`^[A-Za-z0-9!#$%&'*+.^_` + "`" + `|~-]+/[A-Za-z0-9!#$%&'*+.^_` + "`" + `|~-]+$`,
+)
 
 // validInlines drops any image whose name or media type could break out of a
 // MIME header, since both reach header lines verbatim on the SMTP path.
@@ -330,32 +413,60 @@ func validInlines(ctx context.Context, images []InlineImage) []InlineImage {
 	kept := make([]InlineImage, 0, len(images))
 	for _, image := range images {
 		if !inlineFilename.MatchString(image.Filename) {
-			slog.ErrorContext(ctx, "send-email inline filename rejected",
-				"err", errInlineFilename, "filename", image.Filename)
+			slog.ErrorContext(
+				ctx,
+				"send-email inline filename rejected",
+				"err",
+				errInlineFilename,
+				"filename",
+				image.Filename,
+			)
 			continue
 		}
+
 		if !inlineMIMEType.MatchString(image.MIMEType) {
-			slog.ErrorContext(ctx, "send-email inline mimetype rejected",
-				"err", errInlineMIMEType, "mimetype", image.MIMEType)
+			slog.ErrorContext(
+				ctx,
+				"send-email inline mimetype rejected",
+				"err",
+				errInlineMIMEType,
+				"mimetype",
+				image.MIMEType,
+			)
 			continue
 		}
+
 		kept = append(kept, image)
 	}
+
 	return kept
 }
 
 func validateAttachments(ctx context.Context, attachments []Attachment) error {
 	for _, attachment := range attachments {
 		if !inlineFilename.MatchString(attachment.Filename) {
-			err := fmt.Errorf("attachment filename %q: %w", attachment.Filename, errAttachmentFilename)
+			err := fmt.Errorf(
+				"attachment filename %q: %w",
+				attachment.Filename,
+				errAttachmentFilename,
+			)
 			slog.ErrorContext(ctx, "send-email attachment rejected", "err", err)
+
 			return err
 		}
+
 		if !inlineMIMEType.MatchString(attachment.MIMEType) {
-			err := fmt.Errorf("attachment %q mimetype %q: %w", attachment.Filename, attachment.MIMEType, errAttachmentMIMEType)
+			err := fmt.Errorf(
+				"attachment %q mimetype %q: %w",
+				attachment.Filename,
+				attachment.MIMEType,
+				errAttachmentMIMEType,
+			)
 			slog.ErrorContext(ctx, "send-email attachment rejected", "err", err)
+
 			return err
 		}
 	}
+
 	return nil
 }
