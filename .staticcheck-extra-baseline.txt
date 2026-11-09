@@ -1,4 +1,6 @@
-# staticcheck-extra: generated_at=2026-11-08T23:02:54Z
+# staticcheck-extra: generated_at=2026-11-09T03:22:08Z
+mailer/disk_linux.go:3:9: filenameprefix: disk_linux.go repeats prefix "disk"; use directory "disk"	# staticcheck-extra:first_added=2026-11-09T02:26:27Z last_seen=2026-11-09T02:26:27Z
+mailer/disk_other.go:3:9: filenameprefix: disk_other.go repeats prefix "disk"; use directory "disk"	# staticcheck-extra:first_added=2026-11-09T02:26:27Z last_seen=2026-11-09T02:26:27Z
 internal/clock/clock.go:7:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-08T23:02:54Z
 mailer/clock.go:12:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-08T23:02:54Z
 mailer/httpapi.go:31:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-08T23:02:54Z

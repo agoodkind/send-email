@@ -369,7 +369,8 @@ func ParseBoolEnv(v string) bool {
 	return v == "1" || v == "true" || v == "yes"
 }
 
-// AtoiDefault parses value as an int or returns def when value is empty or invalid.
+// AtoiDefault parses value as an int. It returns def when value is empty or
+// invalid.
 func AtoiDefault(value string, def int) int {
 	value = strings.TrimSpace(value)
 	if value == "" {
