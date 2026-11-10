@@ -1,4 +1,75 @@
-# golangci-lint: generated_at=2026-11-09T15:48:31Z
+# golangci-lint: generated_at=2026-11-10T10:08:02Z
+mailer/content.go:22:1: godoc line is too long (79 > 77) (godoclint)	# golangci-lint:first_added=2026-11-08T23:03:28Z last_seen=2026-11-10T10:08:02Z
+mailer/content.go:42:10: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"ordered content cannot be combined with Body, HTML, or Tables\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/content.go:42:10: error-format: fmt.Errorf can be replaced with errors.New (perfsprint)	# golangci-lint:first_added=2026-11-08T23:03:32Z last_seen=2026-11-10T10:08:02Z
+mailer/content.go:49:12: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"content block %d: text cannot include HTML or Table\", index)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/content.go:54:12: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\n\t\"content block %d: HTML requires markup and a text alternative without Table\",\n\tindex,\n)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/content.go:61:12: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\n\t\"content block %d: table requires Table without Text or HTML\",\n\tindex,\n)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/content.go:67:11: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"content block %d: unknown kind %q\", index, block.Kind)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/httpapi.go:114:2: parameter name 'to' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/httpapi.go:195:3: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/httpapi.go:195:10: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"smtp2go api: %s\", parsed.Data.Error)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/httpapi.go:217:2: variable name 'd' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/httpapi.go:223:4: variable name 'c' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/httpapi.go:263:13: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"no usable IP on %q\", name)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:132:2: variable name 'si' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:189:10: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"auto transport not resolved\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:194:10: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"unknown transport %q\", method)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:201:1: unexported method "resolveIdentity" for struct "Mailer" should be placed after the exported method "Method" (funcorder)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:201:61: named return "from" with type "string" must not be referenced or used by a naked return (nonamedreturns)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:201:67: named return "name" with type "string" must not be referenced or used by a naked return (nonamedreturns)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:201:73: named return "caller" with type "string" must not be referenced or used by a naked return (nonamedreturns)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:220:1: unexported method "resolveMethod" for struct "Mailer" should be placed after the exported method "Method" (funcorder)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:233:1: unexported method "apiKey" for struct "Mailer" should be placed after the exported method "Method" (funcorder)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:242:1: unexported method "sendHTTP" for struct "Mailer" should be placed after the exported method "Method" (funcorder)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:252:10: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"SMTP2GO_API_KEY required for HTTP transport\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:280:1: unexported method "sendSMTP" for struct "Mailer" should be placed after the exported method "Method" (funcorder)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:369:2: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:344:14: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"read env file\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:363:13: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"key not found\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:436:4: continue with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/msmtprc.go:183:5: continue with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/msmtprc.go:50:18: Magic number: 2, in <condition> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/msmtprc.go:201:21: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"msmtprc: missing 'account default : NAME'\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/msmtprc.go:206:21: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"msmtprc: unknown account %q\", defaultAlias)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/msmtprc.go:211:21: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"msmtprc: missing host\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/msmtprc.go:215:21: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"msmtprc: missing from\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/msmtprc.go:219:21: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"msmtprc: missing user or password\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/msmtprc.go:84:19: Magic number: 587, in <assign> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/render.go:140:20: Magic number: 2, in <condition> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/render.go:66:2: parameter name 'si' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/smtp_send.go:69:20: parameter name 'b' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/smtp_send.go:22:2: parameter name 'to' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/smtp_send.go:197:3: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/smtp_send.go:179:2: variable name 'w' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/smtp_send.go:30:6: variable name 'b' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:115:44: Magic number: 4, in <argument> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:179:11: Magic number: 86400, in <operation> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:179:2: variable name 'd' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:181:11: Magic number: 3600, in <operation> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:181:2: variable name 'h' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:183:11: Magic number: 60, in <operation> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:183:2: variable name 'm' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:202:18: Magic number: 3, in <condition> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:210:2: variable name 'f' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:236:85: Magic number: 1024, in <argument> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:258:13: Magic number: 5, in <operation> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:261:6: variable name 'wg' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:262:6: variable name 'mu' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:265:33: Magic number: 3, in <assign> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:266:2: variable name 'tr' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:280:6: variable name 'u' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:288:7: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"panic: %v\", r)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:310:2: parameter name 'mu' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:316:3: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:335:49: Magic number: 4096, in <argument> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:340:2: variable name 's' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:353:20: named return "v4lines" with type "[]string" must not be referenced or used by a naked return (nonamedreturns)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:353:29: named return "v6lines" with type "[]string" must not be referenced or used by a naked return (nonamedreturns)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:370:8: variable name 'ip' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:82:2: variable name 'si' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+main.go:114:2: variable name 'fs' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
+main.go:79:2: variable name 'm' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-10T10:08:02Z
 mailer/content.go:90:2: missing whitespace below this line (after-block) (wsl_v5)	# golangci-lint:first_added=2026-11-09T02:26:41Z last_seen=2026-11-09T02:26:41Z
 mailer/content.go:43:2: missing whitespace above this line (invalid statement above range) (wsl_v5)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-09T02:26:41Z
 mailer/content.go:91:2: missing whitespace above this line (too many lines above return) (wsl_v5)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-09T02:26:41Z
@@ -38,92 +109,21 @@ mailer/sysinfo_test.go:46:2: missing whitespace above this line (invalid stateme
 mailer/sysinfo_test.go:98:2: missing whitespace above this line (too many lines above return) (wsl_v5)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-09T02:26:41Z
 main.go:87:2: missing whitespace below this line (after-block) (wsl_v5)	# golangci-lint:first_added=2026-11-09T02:26:41Z last_seen=2026-11-09T02:26:41Z
 main.go:89:2: missing whitespace above this line (too many lines above return) (wsl_v5)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-09T02:26:41Z
-mailer/content.go:41:10: error-format: fmt.Errorf can be replaced with errors.New (perfsprint)	# golangci-lint:first_added=2026-11-08T23:03:32Z last_seen=2026-11-08T23:03:32Z
-mailer/content.go:22:1: godoc line is too long (79 > 77) (godoclint)	# golangci-lint:first_added=2026-11-08T23:03:28Z last_seen=2026-11-08T23:03:28Z
-mailer/content.go:41:10: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"ordered content cannot be combined with Body, HTML, or Tables\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/content.go:47:12: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"content block %d: text cannot include HTML or Table\", index)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/content.go:51:12: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"content block %d: HTML requires markup and a text alternative without Table\", index)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/content.go:55:12: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"content block %d: table requires Table without Text or HTML\", index)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/content.go:58:11: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"content block %d: unknown kind %q\", index, block.Kind)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/content.go:91:2: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/content_test.go:159:2: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/disk_other.go:6:9: string `N/A` has 13 occurrences, make it a constant (goconst)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/httpapi.go:80:2: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/httpapi.go:150:10: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\n\t\"smtp2go http %d: %s\",\n\tresp.StatusCode,\n\tstrings.TrimSpace(string(body)),\n)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/httpapi.go:162:5: avoid inline error handling using `if err := ...; err != nil`; use plain assignment `err := ...` (noinlineerr)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/httpapi.go:165:10: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"smtp2go api: %s\", parsed.Data.Error)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/httpapi.go:182:2: variable name 'd' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/httpapi.go:188:4: variable name 'c' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/httpapi.go:219:13: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"no usable IP on %q\", name)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/httpapi.go:99:2: parameter name 'to' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:360:2: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/mailer.go:148:5: avoid inline error handling using `if err := ...; err != nil`; use plain assignment `err := ...` (noinlineerr)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:127:2: variable name 'si' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/mailer.go:142:1: The line is 133 characters long, which exceeds the maximum of 120 characters. (lll)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:164:10: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"auto transport not resolved\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:168:10: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"unknown transport %q\", method)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:174:1: unexported method "resolveIdentity" for struct "Mailer" should be placed after the exported method "Method" (funcorder)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:174:61: named return "from" with type "string" must not be referenced or used by a naked return (nonamedreturns)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:174:67: named return "name" with type "string" must not be referenced or used by a naked return (nonamedreturns)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:174:73: named return "caller" with type "string" must not be referenced or used by a naked return (nonamedreturns)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:190:1: unexported method "resolveMethod" for struct "Mailer" should be placed after the exported method "Method" (funcorder)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:201:1: unexported method "apiKey" for struct "Mailer" should be placed after the exported method "Method" (funcorder)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:209:1: unexported method "sendHTTP" for struct "Mailer" should be placed after the exported method "Method" (funcorder)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:217:10: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"SMTP2GO_API_KEY required for HTTP transport\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/mailer.go:226:1: The line is 132 characters long, which exceeds the maximum of 120 characters. (lll)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:229:1: unexported method "sendSMTP" for struct "Mailer" should be placed after the exported method "Method" (funcorder)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:275:14: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"read env file\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:289:13: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"key not found\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/mailer.go:340:4: continue with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/msmtprc.go:213:2: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/msmtprc.go:166:5: continue with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/msmtprc.go:50:18: Magic number: 2, in <condition> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/msmtprc.go:183:21: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"msmtprc: missing 'account default : NAME'\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/msmtprc.go:187:21: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"msmtprc: unknown account %q\", defaultAlias)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/msmtprc.go:191:21: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"msmtprc: missing host\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/msmtprc.go:194:21: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"msmtprc: missing from\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/msmtprc.go:197:21: do not define dynamic errors, use wrapped static errors instead: "errors.New(\"msmtprc: missing user or password\")" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/msmtprc.go:58:9: avoid inline error handling using `if err := ...; err != nil`; use plain assignment `err := ...` (noinlineerr)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/msmtprc.go:83:19: Magic number: 587, in <assign> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/render.go:174:2: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/render.go:109:5: avoid inline error handling using `if err := ...; err != nil`; use plain assignment `err := ...` (noinlineerr)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/render.go:125:9: string `N/A` has 13 occurrences, make it a constant (goconst)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/render.go:132:20: Magic number: 2, in <condition> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/render.go:66:2: parameter name 'si' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/smtp_send.go:20:2: parameter name 'to' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/smtp_send.go:99:2: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/smtp_send.go:157:5: avoid inline error handling using `if err := ...; err != nil`; use plain assignment `err := ...` (noinlineerr)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/smtp_send.go:144:2: variable name 'w' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/smtp_send.go:24:6: variable name 'b' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/smtp_send.go:78:23: parameter name 'b' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:74:2: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:109:44: Magic number: 4, in <argument> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:168:11: Magic number: 86400, in <operation> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:168:2: variable name 'd' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:170:11: Magic number: 3600, in <operation> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:170:2: variable name 'h' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:172:11: Magic number: 60, in <operation> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:172:2: variable name 'm' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:188:18: Magic number: 3, in <condition> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:195:2: variable name 'f' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:217:25: Magic number: 1024, in <argument> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:238:13: Magic number: 5, in <operation> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:241:6: variable name 'wg' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:242:6: variable name 'mu' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:245:33: Magic number: 3, in <assign> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:246:2: variable name 'tr' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:260:6: variable name 'u' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:265:14: do not define dynamic errors, use wrapped static errors instead: "fmt.Errorf(\"panic: %v\", r)" (err113)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:279:70: parameter name 'mu' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:298:49: Magic number: 4096, in <argument> detected (mnd)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:302:2: variable name 's' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:313:20: named return "v4lines" with type "[]string" must not be referenced or used by a naked return (nonamedreturns)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:313:29: named return "v6lines" with type "[]string" must not be referenced or used by a naked return (nonamedreturns)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:327:8: variable name 'ip' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-mailer/sysinfo.go:79:2: variable name 'si' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/sysinfo.go:82:20: string `N/A` has 13 occurrences, make it a constant (goconst)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 mailer/sysinfo_test.go:98:2: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-main.go:101:2: variable name 'fs' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 main.go:76:5: avoid inline error handling using `if err := ...; err != nil`; use plain assignment `err := ...` (noinlineerr)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
 main.go:89:2: return with no blank line before (nlreturn)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z
-main.go:75:2: variable name 'm' is too short for the scope of its usage (varnamelen)	# golangci-lint:first_added=2026-11-08T23:03:17Z last_seen=2026-11-08T23:03:17Z

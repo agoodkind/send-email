@@ -20,12 +20,15 @@ func TestFormatTextBody(t *testing.T) {
 	if !strings.Contains(out, "hello") {
 		t.Fatal("missing body")
 	}
+
 	if !strings.Contains(out, "Caller: my-caller") {
 		t.Fatal("missing caller")
 	}
+
 	if !strings.Contains(out, "Host: h1") {
 		t.Fatal("missing host")
 	}
+
 	if !strings.Contains(out, "Time:") {
 		t.Fatal("missing time")
 	}
@@ -47,6 +50,7 @@ func TestRenderHTML_containsMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	for _, want := range []string{
 		"body",
 		"Caller",
@@ -82,9 +86,11 @@ func TestRenderHTML_keepsRawHTMLAndFooter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if !strings.Contains(html, raw) {
 		t.Fatalf("html dropped the raw block:\n%s", html)
 	}
+
 	// The metadata footer still has to survive beside the new block.
 	for _, want := range []string{
 		"Caller",
@@ -110,6 +116,7 @@ func TestRenderHTML_usesLegacyISPForBothFamilies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	for _, want := range []string{
 		`<tr><td class="k">IPv4 ISP</td><td>Legacy ISP</td></tr>`,
 		`<tr><td class="k">IPv6 ISP</td><td>Legacy ISP</td></tr>`,
@@ -127,6 +134,7 @@ func TestRenderHTML_escapesBody(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if strings.Contains(html, "<script>") {
 		t.Fatal("expected escaped script")
 	}

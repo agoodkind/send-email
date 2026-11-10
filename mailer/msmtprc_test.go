@@ -28,21 +28,27 @@ account default : smtp2go
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if acc.Host != "mail.smtp2go.com" {
 		t.Fatalf("host: got %q", acc.Host)
 	}
+
 	if acc.Port != 587 {
 		t.Fatalf("port: got %d", acc.Port)
 	}
+
 	if acc.User != "host-mwan-home-goodkind-io" {
 		t.Fatalf("user: got %q", acc.User)
 	}
+
 	if acc.Password != "secret123" {
 		t.Fatalf("password mismatch")
 	}
+
 	if acc.From != "mwan@goodkind.io" {
 		t.Fatalf("from: got %q", acc.From)
 	}
+
 	if !acc.AuthLogin {
 		t.Fatal("expected auth login")
 	}

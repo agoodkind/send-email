@@ -1,3 +1,4 @@
-# deadcode: generated_at=2026-05-05T04:09:35Z
-mailer/mailer.go:226:6: unreachable func: ParseBoolEnv	# deadcode:first_added=2026-05-05T04:09:35Z last_seen=2026-05-05T04:09:35Z
-mailer/mailer.go:232:6: unreachable func: AtoiDefault	# deadcode:first_added=2026-05-05T04:09:35Z last_seen=2026-05-05T04:09:35Z
+# deadcode: generated_at=2026-11-10T10:08:02Z
+mailer/mailer.go:367:6: unreachable func: ParseBoolEnv	# deadcode:first_added=2026-05-05T04:09:35Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:374:6: unreachable func: AtoiDefault	# deadcode:first_added=2026-05-05T04:09:35Z last_seen=2026-11-10T10:08:02Z
+mailer/render.go:51:6: unreachable func: RenderHTML	# deadcode:first_added=2026-11-10T10:08:02Z last_seen=2026-11-10T10:08:02Z
