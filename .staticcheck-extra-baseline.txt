@@ -1,13 +1,13 @@
-# staticcheck-extra: generated_at=2026-11-09T15:48:25Z
-mailer/disk_linux.go:3:9: filenameprefix: disk_linux.go repeats prefix "disk"; use directory "disk"	# staticcheck-extra:first_added=2026-11-09T02:26:27Z last_seen=2026-11-09T02:26:27Z
-mailer/disk_other.go:3:9: filenameprefix: disk_other.go repeats prefix "disk"; use directory "disk"	# staticcheck-extra:first_added=2026-11-09T02:26:27Z last_seen=2026-11-09T02:26:27Z
-internal/clock/clock.go:7:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-08T23:02:54Z
-mailer/clock.go:12:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-08T23:02:54Z
-mailer/httpapi.go:31:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-08T23:02:54Z
-mailer/mailer.go:298:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-08T23:02:54Z
-mailer/msmtprc.go:202:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-08T23:02:54Z
-mailer/render.go:47:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-08T23:02:54Z
-mailer/sysinfo.go:67:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-08T23:02:54Z
+# staticcheck-extra: generated_at=2026-11-10T10:08:02Z
+internal/clock/clock.go:7:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-10T10:08:02Z
+mailer/clock.go:12:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-10T10:08:02Z
+mailer/disk_linux.go:3:9: filenameprefix: disk_linux.go repeats prefix "disk"; use directory "disk"	# staticcheck-extra:first_added=2026-11-09T02:26:27Z last_seen=2026-11-10T10:08:02Z
+mailer/disk_other.go:3:9: filenameprefix: disk_other.go repeats prefix "disk"; use directory "disk"	# staticcheck-extra:first_added=2026-11-09T02:26:27Z last_seen=2026-11-10T10:08:02Z
+mailer/httpapi.go:34:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-10T10:08:02Z
+mailer/mailer.go:372:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-10T10:08:02Z
+mailer/msmtprc.go:225:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-10T10:08:02Z
+mailer/render.go:47:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-10T10:08:02Z
+mailer/sysinfo.go:69:1: doc_structure: add an introduction, explanation, and example or layout	# staticcheck-extra:first_added=2026-11-08T23:02:54Z last_seen=2026-11-10T10:08:02Z
 mailer/content_test.go:162:6: Test TestSendSMTPPreheaderPreservesLegacyBody calls the unexported function normalizePreheader of the package under test. A test must enter through the exported API or the built command. Call the exported entry point that uses normalizePreheader.	# staticcheck-extra:first_added=2026-10-04T21:52:36Z last_seen=2026-10-04T21:52:36Z
 mailer/mailer_test.go:15:6: Test TestValidInlines_dropsHeaderInjection calls the unexported function validInlines of the package under test. A test must enter through the exported API or the built command. Call the exported entry point that uses validInlines.	# staticcheck-extra:first_added=2026-10-04T21:52:36Z last_seen=2026-10-04T21:52:36Z
 mailer/mailer_test.go:28:6: Test TestBuildMIMEMessage_carriesInlineImage calls the unexported function buildMIMEMessage of the package under test. A test must enter through the exported API or the built command. Call the exported entry point that uses buildMIMEMessage.	# staticcheck-extra:first_added=2026-10-04T21:52:36Z last_seen=2026-10-04T21:52:36Z

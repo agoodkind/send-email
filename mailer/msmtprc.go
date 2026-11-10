@@ -50,6 +50,7 @@ func (m *msmtpPartial) applyLine(key string, parts []string) {
 	if len(parts) < 2 {
 		return
 	}
+
 	val := parts[1]
 	switch msmtpFieldKey(key) {
 	case fieldHost:
@@ -88,45 +89,59 @@ func mergeMsmtp(defaults, acc msmtpPartial) Account {
 	if defaults.trustFile != "" {
 		out.TrustCertsFile = defaults.trustFile
 	}
+
 	if defaults.tls != nil {
 		out.TLS = *defaults.tls
 	}
+
 	if defaults.tlsStartTLS != nil {
 		out.TLSStartTLS = *defaults.tlsStartTLS
 	}
+
 	if defaults.authLogin != nil {
 		out.AuthLogin = *defaults.authLogin
 	}
+
 	if defaults.port > 0 {
 		out.Port = defaults.port
 	}
+
 	if acc.host != "" {
 		out.Host = acc.host
 	}
+
 	if acc.port > 0 {
 		out.Port = acc.port
 	}
+
 	if acc.user != "" {
 		out.User = acc.user
 	}
+
 	if acc.password != "" {
 		out.Password = acc.password
 	}
+
 	if acc.from != "" {
 		out.From = acc.from
 	}
+
 	if acc.trustFile != "" {
 		out.TrustCertsFile = acc.trustFile
 	}
+
 	if acc.tls != nil {
 		out.TLS = *acc.tls
 	}
+
 	if acc.tlsStartTLS != nil {
 		out.TLSStartTLS = *acc.tlsStartTLS
 	}
+
 	if acc.authLogin != nil {
 		out.AuthLogin = *acc.authLogin
 	}
+
 	return out
 }
 
@@ -150,10 +165,12 @@ func ParseMsmtprc(data []byte) (Account, error) {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
+
 		parts := strings.Fields(line)
 		if len(parts) == 0 {
 			continue
 		}
+
 		key := strings.ToLower(parts[0])
 		switch msmtpDirective(key) {
 		case directiveDefaults:
@@ -165,6 +182,7 @@ func ParseMsmtprc(data []byte) (Account, error) {
 				block = ""
 				continue
 			}
+
 			if len(parts) >= 2 {
 				block = parts[1]
 			}
@@ -182,20 +200,25 @@ func ParseMsmtprc(data []byte) (Account, error) {
 	if defaultAlias == "" {
 		return Account{}, errors.New("msmtprc: missing 'account default : NAME'")
 	}
+
 	named, ok := accounts[defaultAlias]
 	if !ok {
 		return Account{}, fmt.Errorf("msmtprc: unknown account %q", defaultAlias)
 	}
+
 	acc := mergeMsmtp(defaults, named)
 	if acc.Host == "" {
 		return Account{}, errors.New("msmtprc: missing host")
 	}
+
 	if acc.From == "" {
 		return Account{}, errors.New("msmtprc: missing from")
 	}
+
 	if acc.User == "" || acc.Password == "" {
 		return Account{}, errors.New("msmtprc: missing user or password")
 	}
+
 	return acc, nil
 }
 
@@ -204,11 +227,14 @@ func LoadMsmtprc(path string) (Account, error) {
 	if path == "" {
 		path = "/etc/msmtprc"
 	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		wrapped := fmt.Errorf("read msmtprc %q: %w", path, err)
 		slog.Error("msmtprc read failed", "err", wrapped, "path", path)
+
 		return Account{}, wrapped
 	}
+
 	return ParseMsmtprc(data)
 }
