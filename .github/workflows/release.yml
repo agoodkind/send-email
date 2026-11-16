@@ -33,6 +33,6 @@ jobs:
           path: dist
       - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          go-version: stable
       - run: go run github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.49.0 package --config packaging/nfpm.yaml --packager deb --target dist
       - run: gh release upload "${RELEASE_TAG}" dist/*.deb
