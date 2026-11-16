@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"slices"
 
 	"goodkind.io/send-email/mailer"
@@ -21,7 +22,7 @@ Required:
   -m MSG        Email message body
 
 Optional:
-  -f FROM       Sender email (default: HOSTNAME-mailer@goodkind.io)
+  -f FROM       Sender email (default: FQDN-mailer@goodkind.io)
   -n NAME       Sender name (default: hostname)
   -c CALLER     Caller name for metadata (default: send-email)
   --http        Use SMTP2GO HTTP API instead of sendmail/msmtp
@@ -40,7 +41,14 @@ type cliArgs struct {
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	slog.Info("send-email start")
-	if err := run(context.Background(), os.Args); err != nil {
+	var err error
+	if filepath.Base(os.Args[0]) == sendmailName {
+		err = runSendmail(context.Background(), os.Args[1:], os.Stdin)
+	} else {
+		err = run(context.Background(), os.Args)
+	}
+
+	if err != nil {
 		if errors.Is(err, errUsage) {
 			fmt.Fprintf(os.Stderr, usageText, os.Args[0])
 			os.Exit(1)
@@ -58,20 +66,11 @@ func run(ctx context.Context, argv []string) error {
 	}
 
 	if args.apiKey == "" {
-		args.apiKey = mailer.LoadAPIKeyFromEnvFiles([]string{
-			"/etc/mwan-watchdog/watchdog.env",
-			"/etc/mwan/mwan.env",
-		})
+		args.apiKey = mailer.LoadAPIKeyFromEnvFiles(apiKeyFiles())
 	}
 
-	cfg := mailer.Config{
-		SMTP2GOAPIKey:     args.apiKey,
-		MsmtprcPath:       "",
-		DefaultFromDomain: "",
-		BindInterface:     args.bind,
-		Transport:         mailer.MethodAuto,
-		Now:               nil,
-	}
+	cfg := newConfig(args.apiKey)
+	cfg.BindInterface = args.bind
 	if args.useHTTP {
 		cfg.Transport = mailer.MethodHTTP
 	}
@@ -97,6 +96,26 @@ func run(ctx context.Context, argv []string) error {
 	fmt.Printf("Email sent to %s via %s\n", args.to, m.Method())
 
 	return nil
+}
+
+func apiKeyFiles() []string {
+	return []string{
+		"/etc/send-email/smtp2go.env",
+		"/etc/mwan-watchdog/watchdog.env",
+		"/etc/mwan/mwan.env",
+	}
+}
+
+func newConfig(apiKey string) mailer.Config {
+	return mailer.Config{
+		SMTP2GOAPIKey:     apiKey,
+		SMTP2GOEndpoint:   os.Getenv("SMTP2GO_ENDPOINT"),
+		MsmtprcPath:       "",
+		DefaultFromDomain: "",
+		BindInterface:     "",
+		Transport:         mailer.MethodAuto,
+		Now:               nil,
+	}
 }
 
 func parseArgs(argv []string) (cliArgs, error) {
