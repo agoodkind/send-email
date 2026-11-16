@@ -16,12 +16,23 @@ jobs:
   deb:
     needs: release
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
     permissions:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ needs.release.outputs.tag }}
+      DEB_ARCH: ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v7
-      - run: packaging/build-deb.sh "${RELEASE_TAG}" dist-deb
-      - run: gh release upload "${RELEASE_TAG}" dist-deb/*.deb
+      - uses: actions/download-artifact@v8
+        with:
+          name: build-linux-${{ matrix.arch }}
+          path: dist
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: go run github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.49.0 package --config packaging/nfpm.yaml --packager deb --target dist
+      - run: gh release upload "${RELEASE_TAG}" dist/*.deb
