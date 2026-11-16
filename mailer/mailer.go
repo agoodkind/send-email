@@ -442,8 +442,9 @@ var (
 		"attachment filename must be letters, digits, dot, dash, or underscore",
 	)
 	errAttachmentMIMEType = errors.New("attachment mimetype must be one type/subtype pair")
-	errNoHostName         = errors.New("reverse lookup returned no host name")
 )
+
+var errNoHostName = errors.New("reverse lookup returned no host name")
 
 // inlineFilename matches the names a Content-ID and a cid: reference can carry
 // safely: letters, digits, dot, dash, and underscore.

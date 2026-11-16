@@ -22,7 +22,7 @@ Required:
   -m MSG        Email message body
 
 Optional:
-  -f FROM       Sender email (default: HOSTNAME-mailer@goodkind.io)
+  -f FROM       Sender email (default: FQDN-mailer@goodkind.io)
   -n NAME       Sender name (default: hostname)
   -c CALLER     Caller name for metadata (default: send-email)
   --http        Use SMTP2GO HTTP API instead of sendmail/msmtp

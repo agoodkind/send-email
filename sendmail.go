@@ -21,7 +21,6 @@ const (
 	sendmailName       = "sendmail"
 	localRecipientKey  = "LOCAL_RECIPIENT"
 	localRecipientFile = "/etc/send-email/mail.env"
-	smtp2goVariable    = "SMTP2GO_API_KEY"
 	flagFrom           = "-f"
 	flagReturn         = "-r"
 	flagName           = "-F"
@@ -69,7 +68,10 @@ func runSendmail(ctx context.Context, argv []string, stdin io.Reader) error {
 
 	recipients := args.recipients
 	if len(recipients) == 0 {
-		recipients = headerAddresses(parsed.Header.Get("To"))
+		recipients, err = headerAddresses(parsed.Header.Get("To"))
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(recipients) == 0 {
@@ -78,7 +80,11 @@ func runSendmail(ctx context.Context, argv []string, stdin io.Reader) error {
 
 	sender := args.sender
 	if sender == "" {
-		senders := headerAddresses(parsed.Header.Get("From"))
+		senders, sendersErr := headerAddresses(parsed.Header.Get("From"))
+		if sendersErr != nil {
+			return sendersErr
+		}
+
 		if len(senders) > 0 {
 			sender = senders[0]
 		}
@@ -93,7 +99,7 @@ func runSendmail(ctx context.Context, argv []string, stdin io.Reader) error {
 		return err
 	}
 
-	client := mailer.New(newConfig(sendmailAPIKey()))
+	client := mailer.New(newConfig(mailer.LoadAPIKeyFromEnvFiles(apiKeyFiles())))
 	var failures []error
 
 	for _, recipient := range resolved {
@@ -150,10 +156,10 @@ func parseSendmailArgs(argv []string) sendmailArgs {
 	return args
 }
 
-func headerAddresses(value string) []string {
+func headerAddresses(value string) ([]string, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
-		return nil
+		return nil, nil
 	}
 
 	var addresses []string
@@ -163,17 +169,33 @@ func headerAddresses(value string) []string {
 			addresses = append(addresses, address.Address)
 		}
 
-		return addresses
+		return addresses, nil
 	}
 
 	for field := range strings.SplitSeq(trimmed, ",") {
 		field = strings.TrimSpace(field)
-		if field != "" {
-			addresses = append(addresses, field)
+		if field == "" {
+			continue
 		}
+
+		if !strings.Contains(field, "@") {
+			addresses = append(addresses, field)
+
+			continue
+		}
+
+		address, fieldErr := mail.ParseAddress(field)
+		if fieldErr != nil {
+			wrapped := fmt.Errorf("parse address %q: %w", field, fieldErr)
+			slog.Error("sendmail address rejected", "err", wrapped)
+
+			return nil, wrapped
+		}
+
+		addresses = append(addresses, address.Address)
 	}
 
-	return addresses
+	return addresses, nil
 }
 
 func mediaTypeOf(header string) (string, map[string]string, error) {
@@ -260,7 +282,11 @@ func resolveLocalRecipients(recipients []string) ([]string, error) {
 		}
 
 		if local == "" {
-			local = lookupLocalRecipient()
+			var lookupErr error
+			local, lookupErr = lookupLocalRecipient()
+			if lookupErr != nil {
+				return nil, lookupErr
+			}
 		}
 
 		if local == "" {
@@ -280,19 +306,26 @@ func resolveLocalRecipients(recipients []string) ([]string, error) {
 	return resolved, nil
 }
 
-func lookupLocalRecipient() string {
+func lookupLocalRecipient() (string, error) {
 	value := strings.TrimSpace(os.Getenv(localRecipientKey))
 	if value != "" {
-		return value
+		return value, nil
 	}
 
 	return readEnvFileValue(localRecipientFile, localRecipientKey)
 }
 
-func readEnvFileValue(path, key string) string {
+func readEnvFileValue(path, key string) (string, error) {
 	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+
 	if err != nil {
-		return ""
+		wrapped := fmt.Errorf("read %s: %w", path, err)
+		slog.Error("sendmail env file unreadable", "err", wrapped)
+
+		return "", wrapped
 	}
 
 	prefix := key + "="
@@ -300,17 +333,9 @@ func readEnvFileValue(path, key string) string {
 	for line := range strings.SplitSeq(string(data), "\n") {
 		line = strings.TrimSpace(line)
 		if rest, ok := strings.CutPrefix(line, prefix); ok {
-			return strings.Trim(strings.TrimSpace(rest), `"`)
+			return strings.Trim(strings.TrimSpace(rest), `"`), nil
 		}
 	}
 
-	return ""
-}
-
-func sendmailAPIKey() string {
-	if strings.TrimSpace(os.Getenv(smtp2goVariable)) != "" {
-		return ""
-	}
-
-	return mailer.LoadAPIKeyFromEnvFiles(apiKeyFiles())
+	return "", nil
 }
