@@ -20,9 +20,8 @@ jobs:
       matrix:
         arch: [amd64, arm64]
     permissions:
-      contents: write
+      contents: read
     env:
-      GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ needs.release.outputs.tag }}
       DEB_ARCH: ${{ matrix.arch }}
     steps:
@@ -35,4 +34,32 @@ jobs:
         with:
           go-version: stable
       - run: go run github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.49.0 package --config packaging/nfpm.yaml --packager deb --target dist
-      - run: gh release upload "${RELEASE_TAG}" dist/*.deb
+      - uses: actions/upload-artifact@v7
+        with:
+          name: deb-${{ matrix.arch }}
+          path: dist/*.deb
+          if-no-files-found: error
+  apt:
+    needs: deb
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: deb-*
+          path: debs
+          merge-multiple: true
+      - uses: morph027/apt-repo-action@v3
+        id: repository
+        with:
+          repo-name: send-email
+          scan-dir: debs
+          codename: stable
+          architectures: amd64 arm64
+          signing-key: ${{ secrets.APT_SIGNING_KEY }}
+      - uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ee7d7ca7d611ef8c2a07885e8362de0c
+          command: pages deploy ${{ steps.repository.outputs.dir }} --project-name=send-email-apt --branch=main
