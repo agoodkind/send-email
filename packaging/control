@@ -1,0 +1,10 @@
+Package: send-email
+Version: @VERSION@
+Architecture: @ARCH@
+Maintainer: agoodkind <agoodkind@users.noreply.github.com>
+Section: mail
+Priority: optional
+Provides: mail-transport-agent
+Conflicts: mail-transport-agent
+Replaces: mail-transport-agent
+Description: Go CLI and library for sending email through msmtp-compatible SMTP or the SMTP2GO HTTP API
