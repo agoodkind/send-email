@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"regexp"
 	"strconv"
@@ -127,7 +128,7 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 		host = "unknown"
 	}
 
-	from, name, caller := m.resolveIdentity(msg, host)
+	from, name, caller := m.resolveIdentity(ctx, msg, host)
 
 	si := CollectSysInfo(ctx)
 	textMessage := msg.Body
@@ -198,10 +199,15 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 	}
 }
 
-func (m *Mailer) resolveIdentity(msg Message, host string) (from, name, caller string) {
+func (m *Mailer) resolveIdentity(
+	ctx context.Context,
+	msg Message,
+	host string,
+) (from, name, caller string) {
 	from = strings.TrimSpace(msg.From)
 	if from == "" {
-		from = fmt.Sprintf("%s-mailer@%s", host, m.cfg.DefaultFromDomain)
+		label := strings.ReplaceAll(fullyQualifiedName(ctx, host), ".", "-")
+		from = fmt.Sprintf("%s-mailer@%s", label, m.cfg.DefaultFromDomain)
 	}
 
 	name = strings.TrimSpace(msg.Name)
@@ -215,6 +221,46 @@ func (m *Mailer) resolveIdentity(msg Message, host string) (from, name, caller s
 	}
 
 	return from, name, caller
+}
+
+func fullyQualifiedName(ctx context.Context, host string) string {
+	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		slog.ErrorContext(ctx, "send-email host lookup failed", "err", err, "host", host)
+
+		return host
+	}
+
+	for _, addr := range addrs {
+		names, lookupErr := net.DefaultResolver.LookupAddr(ctx, addr.IP.String())
+		if lookupErr != nil {
+			slog.ErrorContext(
+				ctx,
+				"send-email reverse lookup failed",
+				"err",
+				lookupErr,
+				"addr",
+				addr.IP.String(),
+			)
+
+			continue
+		}
+
+		if len(names) > 0 {
+			return strings.TrimSuffix(names[0], ".")
+		}
+	}
+
+	slog.ErrorContext(
+		ctx,
+		"send-email host lookup returned no name",
+		"err",
+		errNoHostName,
+		"host",
+		host,
+	)
+
+	return host
 }
 
 func (m *Mailer) resolveMethod() Transport {
@@ -396,6 +442,7 @@ var (
 		"attachment filename must be letters, digits, dot, dash, or underscore",
 	)
 	errAttachmentMIMEType = errors.New("attachment mimetype must be one type/subtype pair")
+	errNoHostName         = errors.New("reverse lookup returned no host name")
 )
 
 // inlineFilename matches the names a Content-ID and a cid: reference can carry
