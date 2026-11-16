@@ -1,0 +1,24 @@
+name: send-email
+arch: ${DEB_ARCH}
+platform: linux
+version: ${RELEASE_TAG}
+version_schema: none
+section: mail
+priority: optional
+maintainer: agoodkind <agoodkind@users.noreply.github.com>
+description: Go CLI and library for sending email through msmtp-compatible SMTP or the SMTP2GO HTTP API
+provides:
+  - mail-transport-agent
+conflicts:
+  - mail-transport-agent
+replaces:
+  - mail-transport-agent
+contents:
+  - src: dist/send-email_linux_${DEB_ARCH}/send-email
+    dst: /usr/bin/send-email
+    expand: true
+    file_info:
+      mode: 0755
+  - src: /usr/bin/send-email
+    dst: /usr/sbin/sendmail
+    type: symlink
